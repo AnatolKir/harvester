@@ -1,0 +1,64 @@
+# Fly.io configuration for TikTok Domain Harvester Worker
+# Run 'fly launch' to generate a customized version of this file
+
+app = "tiktok-harvester-worker"
+primary_region = "iad"
+kill_signal = "SIGTERM"
+kill_timeout = "30s"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[processes]
+  worker = "python main.py"
+
+[env]
+  NODE_ENV = "production"
+  PYTHONUNBUFFERED = "1"
+  PLAYWRIGHT_BROWSERS_PATH = "/ms-playwright"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = true
+  auto_start_machines = true
+  min_machines_running = 1
+  processes = ["worker"]
+
+  [http_service.http_options]
+    h2_backend = true
+
+[[services]]
+  protocol = "tcp"
+  internal_port = 8080
+  processes = ["worker"]
+
+  [[services.ports]]
+    port = 80
+    handlers = ["http"]
+
+  [[services.ports]]
+    port = 443
+    handlers = ["http", "tls"]
+
+  [services.concurrency]
+    type = "connections"
+    hard_limit = 100
+    soft_limit = 80
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "1gb"
+
+[checks]
+  [checks.health]
+    grace_period = "30s"
+    interval = "30s"
+    method = "GET"
+    path = "/health"
+    port = 8080
+    timeout = "10s"
+    tls_skip_verify = false
+
+[restart]
+  policy = "always"

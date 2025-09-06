@@ -1,0 +1,753 @@
+openapi: 3.0.3
+info:
+  title: TikTok Domain Harvester API
+  description: |
+    REST API for the TikTok Domain Harvester project - a comment-first web crawler that extracts domains from TikTok promoted video comments.
+    
+    ## Features
+    - Domain discovery and tracking
+    - Video and comment analysis
+    - Real-time statistics and trends
+    - Worker job management
+    - Rate-limited endpoints
+    
+    ## Authentication
+    All endpoints require Bearer token authentication via Supabase Auth.
+  version: 1.0.0
+  license:
+    name: MIT
+  contact:
+    name: TikTok Domain Harvester
+servers:
+  - url: http://localhost:3000/api
+    description: Development server
+  - url: https://your-domain.com/api
+    description: Production server
+
+security:
+  - bearerAuth: []
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Supabase JWT token
+
+  schemas:
+    # Core Domain Types
+    Domain:
+      type: object
+      description: Domain discovered from TikTok comments and videos
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique domain identifier
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        domain:
+          type: string
+          description: The domain name
+          example: "example.com"
+        first_seen_at:
+          type: string
+          format: date-time
+          description: When the domain was first discovered
+          example: "2024-01-15T10:30:00.000Z"
+        last_seen_at:
+          type: string
+          format: date-time
+          description: When the domain was last mentioned
+          example: "2024-01-20T15:45:00.000Z"
+        mention_count:
+          type: integer
+          description: Total number of mentions across all sources
+          example: 25
+        unique_video_count:
+          type: integer
+          description: Number of unique videos mentioning this domain
+          example: 8
+        unique_author_count:
+          type: integer
+          description: Number of unique authors mentioning this domain
+          example: 12
+        is_suspicious:
+          type: boolean
+          description: Whether the domain is flagged as suspicious
+          example: false
+        is_active:
+          type: boolean
+          description: Whether the domain is currently active
+          example: true
+        metadata:
+          type: object
+          nullable: true
+          description: Additional metadata about the domain
+        created_at:
+          type: string
+          format: date-time
+          description: When the record was created
+          example: "2024-01-15T10:30:00.000Z"
+        updated_at:
+          type: string
+          format: date-time
+          description: When the record was last updated
+          example: "2024-01-20T15:45:00.000Z"
+      required:
+        - id
+        - domain
+        - first_seen_at
+        - last_seen_at
+        - mention_count
+        - unique_video_count
+        - unique_author_count
+        - is_suspicious
+        - is_active
+        - created_at
+        - updated_at
+
+    DomainDetails:
+      allOf:
+        - $ref: '#/components/schemas/Domain'
+        - type: object
+          properties:
+            recent_mentions:
+              type: array
+              description: Recent mentions of this domain
+              maxItems: 20
+              items:
+                $ref: '#/components/schemas/DomainMention'
+            time_series:
+              type: array
+              description: Daily mention counts for the past 30 days
+              items:
+                $ref: '#/components/schemas/TimeSeriesPoint'
+
+    DomainMention:
+      type: object
+      description: A specific mention of a domain in a video or comment
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique mention identifier
+        source_type:
+          type: string
+          enum: [video, comment]
+          description: Whether the mention is from a video or comment
+        context:
+          type: string
+          nullable: true
+          description: Surrounding text context of the mention
+          example: "Check out this website: example.com"
+        created_at:
+          type: string
+          format: date-time
+          description: When the mention was discovered
+        video:
+          $ref: '#/components/schemas/VideoSummary'
+        comment:
+          $ref: '#/components/schemas/CommentWithVideo'
+      required:
+        - id
+        - source_type
+        - created_at
+
+    # Video Types
+    Video:
+      type: object
+      description: TikTok video metadata
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique video identifier
+        tiktok_id:
+          type: string
+          description: TikTok's internal video ID
+          example: "7123456789"
+        url:
+          type: string
+          format: uri
+          description: TikTok video URL
+          example: "https://tiktok.com/@user/video/7123456789"
+        title:
+          type: string
+          nullable: true
+          description: Video title
+          example: "Amazing product review"
+        description:
+          type: string
+          nullable: true
+          description: Video description
+          example: "Check out this amazing product!"
+        view_count:
+          type: integer
+          description: Number of views
+          example: 150000
+        share_count:
+          type: integer
+          description: Number of shares
+          example: 2500
+        comment_count:
+          type: integer
+          description: Number of comments
+          example: 1200
+        is_promoted:
+          type: boolean
+          description: Whether the video is a promoted/sponsored post
+          example: true
+        created_at:
+          type: string
+          format: date-time
+          description: When the record was created
+        updated_at:
+          type: string
+          format: date-time
+          description: When the record was last updated
+        last_scraped_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: When the video was last scraped for comments
+        scrape_status:
+          type: string
+          enum: [pending, processing, completed, failed]
+          description: Current scraping status
+          example: "completed"
+        error_message:
+          type: string
+          nullable: true
+          description: Error message if scraping failed
+        metadata:
+          type: object
+          nullable: true
+          description: Additional video metadata
+      required:
+        - id
+        - tiktok_id
+        - url
+        - view_count
+        - share_count
+        - comment_count
+        - is_promoted
+        - scrape_status
+        - created_at
+        - updated_at
+
+    VideoWithDomains:
+      allOf:
+        - $ref: '#/components/schemas/Video'
+        - type: object
+          properties:
+            domain_count:
+              type: integer
+              description: Number of unique domains mentioned in this video
+              example: 3
+            domains:
+              type: array
+              description: Domains mentioned in this video
+              maxItems: 10
+              items:
+                $ref: '#/components/schemas/DomainSummary'
+            comment_count_with_domains:
+              type: integer
+              description: Number of comments that contain domain mentions
+              example: 7
+
+    VideoSummary:
+      type: object
+      description: Simplified video information for mentions
+      properties:
+        id:
+          type: string
+          format: uuid
+        tiktok_id:
+          type: string
+          example: "7123456789"
+        title:
+          type: string
+          nullable: true
+          example: "Amazing product review"
+        url:
+          type: string
+          format: uri
+          example: "https://tiktok.com/@user/video/7123456789"
+      required:
+        - id
+        - tiktok_id
+        - url
+
+    DomainSummary:
+      type: object
+      description: Simplified domain information for video listings
+      properties:
+        id:
+          type: string
+          format: uuid
+        domain:
+          type: string
+          example: "example.com"
+        mention_count:
+          type: integer
+          description: Number of mentions of this domain
+          example: 5
+      required:
+        - id
+        - domain
+        - mention_count
+
+    # Comment Types
+    Comment:
+      type: object
+      description: TikTok comment metadata
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique comment identifier
+        video_id:
+          type: string
+          format: uuid
+          description: ID of the video this comment belongs to
+        tiktok_comment_id:
+          type: string
+          description: TikTok's internal comment ID
+        author_username:
+          type: string
+          description: Comment author's username
+          example: "user123"
+        author_display_name:
+          type: string
+          nullable: true
+          description: Comment author's display name
+        content:
+          type: string
+          description: Comment text content
+          example: "Check out this website: example.com"
+        like_count:
+          type: integer
+          description: Number of likes on the comment
+          example: 15
+        reply_count:
+          type: integer
+          description: Number of replies to the comment
+          example: 3
+        is_author_reply:
+          type: boolean
+          description: Whether this comment is from the video author
+          example: false
+        created_at:
+          type: string
+          format: date-time
+          description: When the record was created
+        posted_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: When the comment was posted on TikTok
+        metadata:
+          type: object
+          nullable: true
+          description: Additional comment metadata
+      required:
+        - id
+        - video_id
+        - tiktok_comment_id
+        - author_username
+        - content
+        - like_count
+        - reply_count
+        - is_author_reply
+        - created_at
+
+    CommentWithVideo:
+      allOf:
+        - $ref: '#/components/schemas/Comment'
+        - type: object
+          properties:
+            video:
+              $ref: '#/components/schemas/VideoSummary'
+
+    # Statistics and Dashboard Types
+    DashboardStats:
+      type: object
+      description: Dashboard statistics and metrics
+      properties:
+        totalDomains:
+          type: integer
+          description: Total number of unique domains discovered
+          example: 1250
+        newToday:
+          type: integer
+          description: Number of new domains discovered today
+          example: 15
+        totalMentions:
+          type: integer
+          description: Total number of domain mentions across all sources
+          example: 8500
+        activeVideos:
+          type: integer
+          description: Number of videos with recent activity
+          example: 450
+        trending:
+          type: array
+          description: Top trending domains
+          maxItems: 5
+          items:
+            $ref: '#/components/schemas/TrendingDomain'
+        processingStatus:
+          $ref: '#/components/schemas/ProcessingStatus'
+        timeSeriesData:
+          type: array
+          description: Daily statistics for the past week
+          items:
+            $ref: '#/components/schemas/TimeSeriesDataPoint'
+      required:
+        - totalDomains
+        - newToday
+        - totalMentions
+        - activeVideos
+        - trending
+        - processingStatus
+        - timeSeriesData
+
+    TrendingDomain:
+      type: object
+      description: Domain with trending information
+      properties:
+        domain:
+          type: string
+          example: "trending-site.com"
+        growth:
+          type: integer
+          description: Growth percentage
+          example: 150
+        mentions:
+          type: integer
+          description: Number of recent mentions
+          example: 45
+        domain_id:
+          type: string
+          format: uuid
+          description: Domain UUID for detailed lookup
+      required:
+        - domain
+        - growth
+        - mentions
+
+    ProcessingStatus:
+      type: object
+      description: Status of background job processing
+      properties:
+        lastRun:
+          type: string
+          format: date-time
+          nullable: true
+          description: When the last job was executed
+          example: "2024-01-20T14:30:00.000Z"
+        status:
+          type: string
+          enum: [pending, processing, completed, failed]
+          description: Current processing status
+          example: "completed"
+        videosProcessed:
+          type: integer
+          description: Number of videos processed in last job
+          example: 25
+        commentsHarvested:
+          type: integer
+          description: Number of comments harvested in last job
+          example: 1200
+        domainsExtracted:
+          type: integer
+          description: Number of domains extracted in last job
+          example: 15
+      required:
+        - status
+        - videosProcessed
+        - commentsHarvested
+        - domainsExtracted
+
+    TimeSeriesPoint:
+      type: object
+      description: Single data point in time series
+      properties:
+        date:
+          type: string
+          format: date
+          description: Date for this data point
+          example: "2024-01-15"
+        mention_count:
+          type: integer
+          description: Number of mentions on this date
+          example: 12
+      required:
+        - date
+        - mention_count
+
+    TimeSeriesDataPoint:
+      type: object
+      description: Dashboard time series data point
+      properties:
+        date:
+          type: string
+          format: date
+          description: Date for this data point
+          example: "2024-01-15"
+        domains:
+          type: integer
+          description: Number of new domains discovered on this date
+          example: 12
+        mentions:
+          type: integer
+          description: Number of mentions on this date
+          example: 150
+      required:
+        - date
+        - domains
+        - mentions
+
+    # Pagination Types
+    Pagination:
+      type: object
+      description: Standard pagination metadata
+      properties:
+        page:
+          type: integer
+          minimum: 1
+          description: Current page number
+          example: 1
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+          description: Items per page
+          example: 20
+        total:
+          type: integer
+          minimum: 0
+          description: Total number of items
+          example: 150
+        totalPages:
+          type: integer
+          minimum: 0
+          description: Total number of pages
+          example: 8
+        hasNext:
+          type: boolean
+          description: Whether there is a next page
+          example: true
+        hasPrev:
+          type: boolean
+          description: Whether there is a previous page
+          example: false
+      required:
+        - page
+        - limit
+        - total
+        - totalPages
+        - hasNext
+        - hasPrev
+
+    CursorPagination:
+      type: object
+      description: Cursor-based pagination metadata
+      properties:
+        cursor:
+          type: string
+          nullable: true
+          description: Current cursor position
+        nextCursor:
+          type: string
+          nullable: true
+          description: Cursor for next page
+          example: "MjAyNC0wMS0xNVQxMDozMDowMC4wMDBa"
+        hasMore:
+          type: boolean
+          description: Whether there are more results
+          example: true
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+          description: Items per page
+          example: 10
+      required:
+        - hasMore
+        - limit
+
+    # Worker and Job Types
+    WorkerWebhookPayload:
+      type: object
+      description: Payload sent by worker to update job status
+      properties:
+        jobId:
+          type: string
+          format: uuid
+          description: Unique job identifier
+          example: "550e8400-e29b-41d4-a716-446655440001"
+        jobType:
+          type: string
+          enum: [discovery, comment_harvesting, domain_extraction]
+          description: Type of job being executed
+          example: "discovery"
+        status:
+          type: string
+          enum: [started, completed, failed]
+          description: Current job status
+          example: "completed"
+        metadata:
+          type: object
+          description: Additional job metadata
+          properties:
+            workerVersion:
+              type: string
+              example: "1.0.0"
+            startTime:
+              type: string
+              format: date-time
+              example: "2024-01-20T14:30:00.000Z"
+        error:
+          type: string
+          nullable: true
+          description: Error message if job failed
+        results:
+          type: object
+          description: Job execution results
+          properties:
+            videosProcessed:
+              type: integer
+              minimum: 0
+              example: 25
+            commentsHarvested:
+              type: integer
+              minimum: 0
+              example: 1200
+            domainsExtracted:
+              type: integer
+              minimum: 0
+              example: 15
+      required:
+        - jobId
+        - jobType
+        - status
+
+    # Error Types
+    ApiError:
+      type: object
+      description: Standard API error response
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: string
+          description: Human-readable error message
+          example: "Validation failed"
+        errors:
+          type: object
+          description: Field-specific validation errors
+          additionalProperties:
+            type: array
+            items:
+              type: string
+          example:
+            page: ["Must be a positive integer"]
+            limit: ["Must be between 1 and 100"]
+      required:
+        - success
+        - error
+
+  responses:
+    ValidationError:
+      description: Request validation failed
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+          example:
+            success: false
+            error: "Validation failed"
+            errors:
+              page: ["Must be a positive integer"]
+              limit: ["Must be between 1 and 100"]
+
+    Unauthorized:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              error:
+                type: string
+                example: "Unauthorized"
+          example:
+            success: false
+            error: "Unauthorized"
+
+    RateLimitError:
+      description: Rate limit exceeded
+      headers:
+        X-RateLimit-Limit:
+          schema:
+            type: integer
+          description: The number of requests allowed per hour
+        X-RateLimit-Remaining:
+          schema:
+            type: integer
+          description: The number of requests remaining in the current window
+        X-RateLimit-Reset:
+          schema:
+            type: integer
+          description: Unix timestamp when the rate limit window resets
+        Retry-After:
+          schema:
+            type: integer
+          description: Seconds to wait before making another request
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              error:
+                type: string
+                example: "Rate limit exceeded. Try again in 3600 seconds."
+          example:
+            success: false
+            error: "Rate limit exceeded. Try again in 3600 seconds."
+
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              error:
+                type: string
+                example: "An unexpected error occurred"
+          example:
+            success: false
+            error: "An unexpected error occurred"
+
+tags:
+  - name: Domains
+    description: Domain discovery and management endpoints
+  - name: Videos
+    description: TikTok video tracking and analysis endpoints  
+  - name: Statistics
+    description: Dashboard metrics and analytics endpoints
+  - name: Worker
+    description: Background worker communication endpoints

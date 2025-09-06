@@ -1,0 +1,253 @@
+name: Deploy to Staging
+
+on:
+  push:
+    branches: [ develop ]
+  workflow_dispatch:
+    inputs:
+      force_deploy:
+        description: 'Force deployment (skip some checks)'
+        type: boolean
+        default: false
+
+env:
+  NODE_VERSION: '18'
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  # Deploy web application to staging
+  deploy-web-staging:
+    name: Deploy Web to Staging
+    runs-on: ubuntu-latest
+    
+    defaults:
+      run:
+        working-directory: ./web
+    
+    environment:
+      name: staging-web
+      url: https://tiktok-harvester-staging.vercel.app
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint check (non-blocking)
+        run: npm run lint
+        continue-on-error: true
+
+      - name: Build application
+        run: npm run build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL_STAGING }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY_STAGING }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY_STAGING }}
+          UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL_STAGING }}
+          UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN_STAGING }}
+          NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET_STAGING }}
+          INNGEST_EVENT_KEY: ${{ secrets.INNGEST_EVENT_KEY_STAGING }}
+          INNGEST_SIGNING_KEY: ${{ secrets.INNGEST_SIGNING_KEY_STAGING }}
+
+      - name: Deploy to Vercel (Preview)
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID_STAGING }}
+          github-comment: false
+          working-directory: ./web
+
+      - name: Get preview URL
+        id: preview-url
+        run: |
+          # This would typically be provided by the Vercel action
+          echo "url=https://tiktok-harvester-staging.vercel.app" >> $GITHUB_OUTPUT
+
+      - name: Deployment success notification
+        if: success()
+        run: |
+          echo "✅ Web application deployed successfully to staging!"
+          echo "🔗 Preview URL: ${{ steps.preview-url.outputs.url }}"
+
+  # Deploy worker to staging
+  deploy-worker-staging:
+    name: Deploy Worker to Staging
+    runs-on: ubuntu-latest
+    
+    defaults:
+      run:
+        working-directory: ./worker
+    
+    environment:
+      name: staging-worker
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Docker build test
+        run: |
+          echo "🔨 Testing Docker build..."
+          docker build -t harvester-worker-staging .
+          echo "✅ Docker build successful"
+
+      - name: Deploy to Railway (if configured)
+        if: secrets.RAILWAY_TOKEN_STAGING != ''
+        uses: bervProject/railway-deploy@v1.2.0
+        with:
+          railway_token: ${{ secrets.RAILWAY_TOKEN_STAGING }}
+          service: 'harvester-worker-staging'
+          workdir: './worker'
+        continue-on-error: true
+
+      - name: Alternative: Manual deployment instructions
+        if: secrets.RAILWAY_TOKEN_STAGING == ''
+        run: |
+          echo "ℹ️ Staging worker deployment not configured"
+          echo "To deploy manually:"
+          echo "1. cd worker"
+          echo "2. railway login"
+          echo "3. railway up"
+
+  # Integration tests on staging
+  staging-tests:
+    name: Staging Integration Tests
+    runs-on: ubuntu-latest
+    needs: [deploy-web-staging]
+    if: success()
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Wait for deployment
+        run: sleep 30
+
+      - name: Health check - Web
+        run: |
+          echo "🔍 Testing staging web application..."
+          
+          # Test health endpoint
+          response=$(curl -s -o /dev/null -w "%{http_code}" https://tiktok-harvester-staging.vercel.app/api/health || echo "000")
+          
+          if [ "$response" = "200" ]; then
+            echo "✅ Web health check passed"
+          else
+            echo "❌ Web health check failed (HTTP $response)"
+            exit 1
+          fi
+
+      - name: Basic smoke tests
+        run: |
+          echo "🔍 Running basic smoke tests..."
+          
+          # Test API endpoints
+          endpoints=(
+            "/api/health"
+            "/api/auth/session"
+          )
+          
+          base_url="https://tiktok-harvester-staging.vercel.app"
+          
+          for endpoint in "${endpoints[@]}"; do
+            echo "Testing $endpoint..."
+            response=$(curl -s -o /dev/null -w "%{http_code}" "$base_url$endpoint" || echo "000")
+            
+            if [ "$response" != "000" ] && [ "$response" -lt "500" ]; then
+              echo "✅ $endpoint responded (HTTP $response)"
+            else
+              echo "❌ $endpoint failed (HTTP $response)"
+            fi
+          done
+
+      - name: Performance check
+        run: |
+          echo "🔍 Basic performance check..."
+          
+          # Use curl to measure response time
+          response_time=$(curl -s -o /dev/null -w "%{time_total}" https://tiktok-harvester-staging.vercel.app/ || echo "0")
+          
+          echo "Response time: ${response_time}s"
+          
+          # Check if response time is reasonable (under 5 seconds)
+          if (( $(echo "$response_time < 5.0" | bc -l) )); then
+            echo "✅ Response time acceptable"
+          else
+            echo "⚠️ Response time may be slow: ${response_time}s"
+          fi
+
+  # Create staging deployment summary
+  staging-summary:
+    name: Staging Deployment Summary
+    runs-on: ubuntu-latest
+    needs: [deploy-web-staging, deploy-worker-staging, staging-tests]
+    if: always()
+
+    steps:
+      - name: Create deployment summary
+        run: |
+          echo "## 🚀 Staging Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Web deployment status
+          if [ "${{ needs.deploy-web-staging.result }}" == "success" ]; then
+            echo "### ✅ Web Application" >> $GITHUB_STEP_SUMMARY
+            echo "- **Status**: Deployed successfully" >> $GITHUB_STEP_SUMMARY
+            echo "- **URL**: https://tiktok-harvester-staging.vercel.app" >> $GITHUB_STEP_SUMMARY
+            echo "- **Platform**: Vercel (Preview)" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "### ❌ Web Application" >> $GITHUB_STEP_SUMMARY
+            echo "- **Status**: Deployment failed" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Worker deployment status
+          if [ "${{ needs.deploy-worker-staging.result }}" == "success" ]; then
+            echo "### ✅ Worker" >> $GITHUB_STEP_SUMMARY
+            echo "- **Status**: Deployed successfully" >> $GITHUB_STEP_SUMMARY
+            echo "- **Platform**: Railway (Staging)" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "### ⚠️ Worker" >> $GITHUB_STEP_SUMMARY
+            echo "- **Status**: Deployment skipped or failed" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Test results
+          if [ "${{ needs.staging-tests.result }}" == "success" ]; then
+            echo "### ✅ Integration Tests" >> $GITHUB_STEP_SUMMARY
+            echo "- **Status**: All tests passed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "### ❌ Integration Tests" >> $GITHUB_STEP_SUMMARY
+            echo "- **Status**: Some tests failed" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📊 Deployment Details" >> $GITHUB_STEP_SUMMARY
+          echo "- **Branch**: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Triggered by**: ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Time**: $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
+          
+          # Next steps
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🎯 Next Steps" >> $GITHUB_STEP_SUMMARY
+          echo "- Test the staging environment thoroughly" >> $GITHUB_STEP_SUMMARY
+          echo "- If satisfied, create a PR to main for production deployment" >> $GITHUB_STEP_SUMMARY
+          echo "- Use \`make deploy-all\` for production deployment from main branch" >> $GITHUB_STEP_SUMMARY

@@ -86,44 +86,46 @@ export function useAuth(): UseAuthReturn {
         }
 
         // Set up auth state listener
-        const authSubscription = auth.onAuthStateChange(async (event, session) => {
-          if (!mounted.current) return;
+        const authSubscription = auth.onAuthStateChange(
+          async (event, session) => {
+            if (!mounted.current) return;
 
-          // Clear previous auto-refresh when session changes
-          if (refreshCleanup) {
-            refreshCleanup();
-            refreshCleanup = null;
-          }
+            // Clear previous auto-refresh when session changes
+            if (refreshCleanup) {
+              refreshCleanup();
+              refreshCleanup = null;
+            }
 
-          safeSetState({
-            user: session?.user ?? null,
-            session,
-            loading: false,
-            error: null,
-          });
-
-          // Set up new auto-refresh for new session
-          if (session) {
-            refreshCleanup = sessionManager.setupAutoRefresh(
+            safeSetState({
+              user: session?.user ?? null,
               session,
-              (newSession, refreshError) => {
-                if (!mounted.current) return;
+              loading: false,
+              error: null,
+            });
 
-                if (refreshError) {
-                  safeSetState({ error: refreshError });
-                  return;
+            // Set up new auto-refresh for new session
+            if (session) {
+              refreshCleanup = sessionManager.setupAutoRefresh(
+                session,
+                (newSession, refreshError) => {
+                  if (!mounted.current) return;
+
+                  if (refreshError) {
+                    safeSetState({ error: refreshError });
+                    return;
+                  }
+
+                  safeSetState({
+                    user: newSession?.user ?? null,
+                    session: newSession,
+                    error: null,
+                  });
                 }
-
-                safeSetState({
-                  user: newSession?.user ?? null,
-                  session: newSession,
-                  error: null,
-                });
-              }
-            );
+              );
+            }
           }
-        });
-        
+        );
+
         subscription = authSubscription.data?.subscription || authSubscription;
       } catch (error) {
         safeSetState({

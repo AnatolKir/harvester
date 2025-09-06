@@ -1,62 +1,232 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import {
+  createSuccessResponse,
+  createErrorResponse,
+  withErrorHandling,
+  addRateLimitHeaders,
+} from "@/lib/api";
 
-export async function GET(request: NextRequest) {
-  try {
-    // TODO: Replace with actual Supabase queries
-    // const supabase = await createClient();
+interface DashboardStats {
+  totalDomains: number;
+  newToday: number;
+  totalMentions: number;
+  activeVideos: number;
+  trending: Array<{
+    domain: string;
+    growth: number;
+    mentions: number;
+    domain_id?: string;
+  }>;
+  processingStatus: {
+    lastRun: string | null;
+    status: "pending" | "processing" | "completed" | "failed";
+    videosProcessed: number;
+    commentsHarvested: number;
+    domainsExtracted: number;
+  };
+  timeSeriesData: Array<{
+    date: string;
+    domains: number;
+    mentions: number;
+  }>;
+}
 
-    // const [
-    //   { count: totalDomains },
-    //   { count: newToday },
-    //   { data: trending },
-    //   { data: recentJobs }
-    // ] = await Promise.all([
-    //   supabase.from('domain').select('*', { count: 'exact', head: true }),
-    //   supabase.from('domain')
-    //     .select('*', { count: 'exact', head: true })
-    //     .gte('first_seen_at', new Date().toISOString().split('T')[0]),
-    //   supabase.from('v_domains_trending').select('*').limit(5),
-    //   supabase.from('job_log')
-    //     .select('*')
-    //     .order('started_at', { ascending: false })
-    //     .limit(1)
-    // ]);
+async function handleStatsGet(request: NextRequest) {
+  const supabase = await createClient();
 
-    // Mock data for now
-    const stats = {
-      totalDomains: 156,
-      newToday: 12,
-      totalMentions: 3456,
-      activeVideos: 89,
-      trending: [
-        { domain: "shopify.com", growth: 45, mentions: 234 },
-        { domain: "etsy.com", growth: 32, mentions: 189 },
-        { domain: "amazon.com", growth: 28, mentions: 456 },
-      ],
-      processingStatus: {
-        lastRun: "2024-01-15T16:00:00Z",
-        status: "completed",
-        videosProcessed: 45,
-        commentsHarvested: 678,
-      },
-      timeSeriesData: [
-        { date: "2024-01-09", domains: 5, mentions: 45 },
-        { date: "2024-01-10", domains: 8, mentions: 67 },
-        { date: "2024-01-11", domains: 12, mentions: 89 },
-        { date: "2024-01-12", domains: 7, mentions: 56 },
-        { date: "2024-01-13", domains: 15, mentions: 123 },
-        { date: "2024-01-14", domains: 9, mentions: 78 },
-        { date: "2024-01-15", domains: 12, mentions: 94 },
-      ],
+  // Get today's date for filtering
+  const today = new Date();
+  const todayStart = new Date(today.setHours(0, 0, 0, 0)).toISOString();
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+  // Execute all queries in parallel for better performance
+  const [
+    totalDomainsResult,
+    newTodayResult,
+    totalMentionsResult,
+    activeVideosResult,
+    trendingResult,
+    recentJobResult,
+    timeSeriesResult,
+  ] = await Promise.allSettled([
+    // Total domains count
+    supabase.from("domain").select("*", { count: "exact", head: true }),
+
+    // New domains today
+    supabase
+      .from("domain")
+      .select("*", { count: "exact", head: true })
+      .gte("first_seen_at", todayStart),
+
+    // Total mentions count
+    supabase.from("domain_mention").select("*", { count: "exact", head: true }),
+
+    // Active videos (videos with scrape_status completed and recent activity)
+    supabase
+      .from("video")
+      .select("*", { count: "exact", head: true })
+      .eq("scrape_status", "completed")
+      .gte("last_scraped_at", sevenDaysAgo.toISOString()),
+
+    // Trending domains - try to use the view, fallback to manual query
+    supabase
+      .from("v_domains_trending")
+      .select("*")
+      .order("growth_rate", { ascending: false })
+      .limit(5),
+
+    // Most recent job log entry
+    supabase
+      .from("job_log")
+      .select("*")
+      .order("started_at", { ascending: false })
+      .limit(1),
+
+    // Time series data for the last 7 days
+    supabase.rpc("get_stats_time_series", {
+      p_days: 7,
+    }),
+  ]);
+
+  // Handle results and fallbacks
+  const totalDomains =
+    totalDomainsResult.status === "fulfilled"
+      ? totalDomainsResult.value.count || 0
+      : 0;
+
+  const newToday =
+    newTodayResult.status === "fulfilled" ? newTodayResult.value.count || 0 : 0;
+
+  const totalMentions =
+    totalMentionsResult.status === "fulfilled"
+      ? totalMentionsResult.value.count || 0
+      : 0;
+
+  const activeVideos =
+    activeVideosResult.status === "fulfilled"
+      ? activeVideosResult.value.count || 0
+      : 0;
+
+  // Handle trending domains
+  let trending: Array<{
+    domain: string;
+    growth: number;
+    mentions: number;
+    domain_id?: string;
+  }> = [];
+
+  if (trendingResult.status === "fulfilled" && trendingResult.value.data) {
+    trending = trendingResult.value.data.map((item) => ({
+      domain: item.domain || "",
+      growth: Math.round((item.growth_rate || 0) * 100),
+      mentions: item.mention_count || 0,
+      domain_id: item.id,
+    }));
+  } else {
+    // Fallback: get top domains by mention count
+    const fallbackTrending = await supabase
+      .from("domain")
+      .select("id, domain, mention_count")
+      .order("mention_count", { ascending: false })
+      .limit(5);
+
+    if (fallbackTrending.data) {
+      trending = fallbackTrending.data.map((item) => ({
+        domain: item.domain,
+        growth: 0, // No growth calculation in fallback
+        mentions: item.mention_count,
+        domain_id: item.id,
+      }));
+    }
+  }
+
+  // Handle processing status
+  let processingStatus = {
+    lastRun: null as string | null,
+    status: "pending" as const,
+    videosProcessed: 0,
+    commentsHarvested: 0,
+    domainsExtracted: 0,
+  };
+
+  if (
+    recentJobResult.status === "fulfilled" &&
+    recentJobResult.value.data?.[0]
+  ) {
+    const job = recentJobResult.value.data[0];
+    processingStatus = {
+      lastRun: job.started_at,
+      status: job.status,
+      videosProcessed: (job.metadata as any)?.videosProcessed || 0,
+      commentsHarvested: (job.metadata as any)?.commentsHarvested || 0,
+      domainsExtracted: (job.metadata as any)?.domainsExtracted || 0,
     };
+  }
 
-    return NextResponse.json({ data: stats });
-  } catch (error) {
-    console.error("Error fetching stats:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch statistics" },
-      { status: 500 }
+  // Handle time series data
+  let timeSeriesData: Array<{
+    date: string;
+    domains: number;
+    mentions: number;
+  }> = [];
+
+  if (timeSeriesResult.status === "fulfilled" && timeSeriesResult.value.data) {
+    timeSeriesData = timeSeriesResult.value.data;
+  } else {
+    // Fallback: generate last 7 days with manual queries
+    const dates = Array.from({ length: 7 }, (_, i) => {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      return date.toISOString().split("T")[0];
+    }).reverse();
+
+    timeSeriesData = await Promise.all(
+      dates.map(async (date) => {
+        const startOfDay = `${date}T00:00:00.000Z`;
+        const endOfDay = `${date}T23:59:59.999Z`;
+
+        const [domainsResult, mentionsResult] = await Promise.all([
+          supabase
+            .from("domain")
+            .select("*", { count: "exact", head: true })
+            .gte("first_seen_at", startOfDay)
+            .lte("first_seen_at", endOfDay),
+          supabase
+            .from("domain_mention")
+            .select("*", { count: "exact", head: true })
+            .gte("created_at", startOfDay)
+            .lte("created_at", endOfDay),
+        ]);
+
+        return {
+          date,
+          domains: domainsResult.count || 0,
+          mentions: mentionsResult.count || 0,
+        };
+      })
     );
   }
+
+  const stats: DashboardStats = {
+    totalDomains,
+    newToday,
+    totalMentions,
+    activeVideos,
+    trending,
+    processingStatus,
+    timeSeriesData,
+  };
+
+  const response = createSuccessResponse(stats);
+
+  // Add rate limit headers
+  return addRateLimitHeaders(response, {
+    limit: 1000,
+    remaining: 999,
+    reset: Math.floor(Date.now() / 1000) + 3600,
+  });
 }
+
+export const GET = withErrorHandling(handleStatsGet);

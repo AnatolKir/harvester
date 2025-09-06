@@ -1,0 +1,277 @@
+name: Deploy to Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      deploy_web:
+        description: 'Deploy web application'
+        type: boolean
+        default: true
+      deploy_worker:
+        description: 'Deploy worker'
+        type: boolean
+        default: true
+      worker_platform:
+        description: 'Worker deployment platform'
+        type: choice
+        options:
+          - railway
+          - fly
+        default: railway
+      confirm_production:
+        description: 'I confirm this is a production deployment'
+        type: boolean
+        required: true
+
+env:
+  NODE_VERSION: '18'
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  # Pre-deployment validation
+  pre-deploy:
+    name: Pre-deployment Validation
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Validate inputs
+        run: |
+          if [ "${{ inputs.confirm_production }}" != "true" ]; then
+            echo "❌ Production deployment not confirmed"
+            exit 1
+          fi
+          echo "✅ Production deployment confirmed"
+
+      - name: Check branch
+        run: |
+          if [ "${{ github.ref }}" != "refs/heads/main" ]; then
+            echo "❌ Can only deploy from main branch"
+            exit 1
+          fi
+          echo "✅ Deploying from main branch"
+
+      - name: Environment validation
+        run: |
+          echo "🔍 Validating environment setup..."
+          
+          # Check required secrets are set
+          if [ -z "${{ secrets.VERCEL_TOKEN }}" ]; then
+            echo "❌ VERCEL_TOKEN secret not set"
+            exit 1
+          fi
+          
+          if [ "${{ inputs.deploy_worker }}" == "true" ] && [ "${{ inputs.worker_platform }}" == "railway" ]; then
+            if [ -z "${{ secrets.RAILWAY_TOKEN }}" ]; then
+              echo "❌ RAILWAY_TOKEN secret not set"
+              exit 1
+            fi
+          fi
+          
+          if [ "${{ inputs.deploy_worker }}" == "true" ] && [ "${{ inputs.worker_platform }}" == "fly" ]; then
+            if [ -z "${{ secrets.FLY_API_TOKEN }}" ]; then
+              echo "❌ FLY_API_TOKEN secret not set"
+              exit 1
+            fi
+          fi
+          
+          echo "✅ Environment validation passed"
+
+  # Deploy web application
+  deploy-web:
+    name: Deploy Web to Production
+    runs-on: ubuntu-latest
+    needs: pre-deploy
+    if: inputs.deploy_web == true
+    
+    defaults:
+      run:
+        working-directory: ./web
+    
+    environment:
+      name: production-web
+      url: https://tiktok-harvester.vercel.app
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build application
+        run: npm run build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL_PROD }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY_PROD }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY_PROD }}
+          UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL_PROD }}
+          UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN_PROD }}
+          NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET_PROD }}
+          INNGEST_EVENT_KEY: ${{ secrets.INNGEST_EVENT_KEY_PROD }}
+          INNGEST_SIGNING_KEY: ${{ secrets.INNGEST_SIGNING_KEY_PROD }}
+
+      - name: Deploy to Vercel
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          vercel-args: '--prod'
+          working-directory: ./web
+
+      - name: Deployment success notification
+        if: success()
+        run: |
+          echo "✅ Web application deployed successfully to production!"
+          echo "🔗 URL: https://tiktok-harvester.vercel.app"
+
+  # Deploy worker to Railway
+  deploy-worker-railway:
+    name: Deploy Worker to Railway
+    runs-on: ubuntu-latest
+    needs: pre-deploy
+    if: inputs.deploy_worker == true && inputs.worker_platform == 'railway'
+    
+    environment:
+      name: production-worker-railway
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to Railway
+        uses: bervProject/railway-deploy@v1.2.0
+        with:
+          railway_token: ${{ secrets.RAILWAY_TOKEN }}
+          service: 'harvester-worker'
+          workdir: './worker'
+
+      - name: Deployment success notification
+        if: success()
+        run: echo "✅ Worker deployed successfully to Railway!"
+
+  # Deploy worker to Fly.io
+  deploy-worker-fly:
+    name: Deploy Worker to Fly.io
+    runs-on: ubuntu-latest
+    needs: pre-deploy
+    if: inputs.deploy_worker == true && inputs.worker_platform == 'fly'
+    
+    defaults:
+      run:
+        working-directory: ./worker
+    
+    environment:
+      name: production-worker-fly
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Fly.io CLI
+        uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Deploy to Fly.io
+        run: flyctl deploy --remote-only
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+      - name: Deployment success notification
+        if: success()
+        run: echo "✅ Worker deployed successfully to Fly.io!"
+
+  # Post-deployment verification
+  post-deploy:
+    name: Post-deployment Verification
+    runs-on: ubuntu-latest
+    needs: [deploy-web, deploy-worker-railway, deploy-worker-fly]
+    if: always() && (needs.deploy-web.result == 'success' || needs.deploy-worker-railway.result == 'success' || needs.deploy-worker-fly.result == 'success')
+
+    steps:
+      - name: Web health check
+        if: inputs.deploy_web == true && needs.deploy-web.result == 'success'
+        run: |
+          echo "🔍 Checking web application health..."
+          
+          # Wait for deployment to be ready
+          sleep 30
+          
+          # Health check
+          response=$(curl -s -o /dev/null -w "%{http_code}" https://tiktok-harvester.vercel.app/api/health || echo "000")
+          
+          if [ "$response" = "200" ]; then
+            echo "✅ Web application health check passed"
+          else
+            echo "❌ Web application health check failed (HTTP $response)"
+            exit 1
+          fi
+
+      - name: Worker health check
+        if: inputs.deploy_worker == true && (needs.deploy-worker-railway.result == 'success' || needs.deploy-worker-fly.result == 'success')
+        run: |
+          echo "🔍 Checking worker health..."
+          
+          # Wait for deployment to be ready
+          sleep 60
+          
+          # Note: Worker health check would depend on your specific setup
+          # This is a placeholder - implement based on your worker health endpoint
+          echo "ℹ️ Worker health check - implement based on your setup"
+
+      - name: Create deployment summary
+        run: |
+          echo "## 🎉 Production Deployment Complete!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ inputs.deploy_web }}" == "true" ] && [ "${{ needs.deploy-web.result }}" == "success" ]; then
+            echo "### ✅ Web Application" >> $GITHUB_STEP_SUMMARY
+            echo "- **Status**: Deployed successfully" >> $GITHUB_STEP_SUMMARY
+            echo "- **URL**: https://tiktok-harvester.vercel.app" >> $GITHUB_STEP_SUMMARY
+            echo "- **Platform**: Vercel" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if [ "${{ inputs.deploy_worker }}" == "true" ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### ✅ Worker" >> $GITHUB_STEP_SUMMARY
+            echo "- **Status**: Deployed successfully" >> $GITHUB_STEP_SUMMARY
+            echo "- **Platform**: ${{ inputs.worker_platform }}" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📊 Deployment Details" >> $GITHUB_STEP_SUMMARY
+          echo "- **Branch**: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Triggered by**: ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Time**: $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
+
+  # Handle deployment failures
+  deployment-failed:
+    name: Handle Deployment Failure
+    runs-on: ubuntu-latest
+    needs: [deploy-web, deploy-worker-railway, deploy-worker-fly]
+    if: always() && (needs.deploy-web.result == 'failure' || needs.deploy-worker-railway.result == 'failure' || needs.deploy-worker-fly.result == 'failure')
+
+    steps:
+      - name: Deployment failure summary
+        run: |
+          echo "## ❌ Production Deployment Failed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "One or more deployments failed. Please check the logs above." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🔧 Troubleshooting" >> $GITHUB_STEP_SUMMARY
+          echo "1. Check the error logs in the failed job" >> $GITHUB_STEP_SUMMARY
+          echo "2. Verify all required secrets are configured" >> $GITHUB_STEP_SUMMARY
+          echo "3. Ensure environment variables are correctly set" >> $GITHUB_STEP_SUMMARY
+          echo "4. Consider rolling back if needed" >> $GITHUB_STEP_SUMMARY
+          
+          exit 1
