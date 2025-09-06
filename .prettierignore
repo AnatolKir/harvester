@@ -1,0 +1,17 @@
+node_modules
+.next
+out
+build
+dist
+coverage
+.git
+*.min.js
+*.min.css
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+.env*
+__pycache__
+*.pyc
+.pytest_cache
+.ruff_cache
