@@ -3,8 +3,9 @@ export { createClient } from "./client";
 export { createClient as createServerClient } from "./server";
 
 // Export authentication functions
-export { auth, serverAuth, authUtils } from "./auth";
-export type { AuthResponse, SignUpData, SignInData } from "./auth";
+export { auth, authUtils } from "./auth-client";
+export type { AuthResponse, SignUpData, SignInData } from "./auth-client";
+export { serverAuth } from "./auth-server";
 
 // Export authentication hooks
 export {

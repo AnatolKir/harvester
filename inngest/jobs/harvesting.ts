@@ -115,7 +115,7 @@ export const commentHarvestingJob = inngest.createFunction(
 
           return result;
         } catch (error) {
-          logger.error("Harvesting step failed", { error: error.message });
+          logger.error("Harvesting step failed", { error: error instanceof Error ? error.message : String(error) });
           throw error;
         }
       });
@@ -131,7 +131,7 @@ export const commentHarvestingJob = inngest.createFunction(
           .eq("id", videoId);
 
         if (error) {
-          logger.warn("Failed to update video last_crawled_at", { error: error.message });
+          logger.warn("Failed to update video last_crawled_at", { error: error instanceof Error ? error.message : String(error) });
         }
       });
 
@@ -191,8 +191,8 @@ export const commentHarvestingJob = inngest.createFunction(
 
     } catch (error) {
       logger.error("Comment harvesting job failed", {
-        error: error.message,
-        stack: error.stack,
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
         videoId,
         attempt
       });
@@ -206,7 +206,7 @@ export const commentHarvestingJob = inngest.createFunction(
             status: "failed",
             metadata: {
               videoId,
-              error: error.message,
+              error: error instanceof Error ? error.message : String(error),
               attempt,
               willRetry: attempt < 3
             }
@@ -223,7 +223,7 @@ export const commentHarvestingJob = inngest.createFunction(
               originalEventName: "tiktok/comment.harvest",
               originalPayload: event.data,
               attempt,
-              lastError: error.message
+              lastError: error instanceof Error ? error.message : String(error)
             }
           });
         });
@@ -263,7 +263,7 @@ export const domainExtractionJob = inngest.createFunction(
         
         if (!matches) return [];
 
-        return matches.map(match => {
+        return matches.map((match: string) => {
           // Clean up the domain
           let domain = match.replace(/^https?:\/\//, '').replace(/^www\./, '');
           // Remove trailing slash and path
@@ -323,7 +323,7 @@ export const domainExtractionJob = inngest.createFunction(
               if (insertError) {
                 logger.error("Failed to create domain", {
                   domain: domainInfo.domainName,
-                  error: insertError.message
+                  error: insertError instanceof Error ? insertError.message : String(insertError)
                 });
                 continue;
               }
@@ -347,7 +347,7 @@ export const domainExtractionJob = inngest.createFunction(
               logger.error("Failed to create domain mention", {
                 domainId,
                 commentId,
-                error: mentionError.message
+                error: mentionError instanceof Error ? mentionError.message : String(mentionError)
               });
               continue;
             }
@@ -361,7 +361,7 @@ export const domainExtractionJob = inngest.createFunction(
           } catch (error) {
             logger.error("Failed to process domain", {
               domain: domainInfo.domainName,
-              error: error.message
+              error: error instanceof Error ? error.message : String(error)
             });
           }
         }
@@ -389,8 +389,8 @@ export const domainExtractionJob = inngest.createFunction(
 
     } catch (error) {
       logger.error("Domain extraction job failed", {
-        error: error.message,
-        stack: error.stack,
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
         commentId,
         attempt
       });

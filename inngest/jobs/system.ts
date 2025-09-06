@@ -93,8 +93,8 @@ export const killSwitchJob = inngest.createFunction(
 
     } catch (error) {
       logger.error("Failed to activate kill switch", {
-        error: error.message,
-        stack: error.stack
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined
       });
 
       throw error;
@@ -151,7 +151,7 @@ export const deactivateKillSwitchJob = inngest.createFunction(
       } as JobResult;
 
     } catch (error) {
-      logger.error("Failed to deactivate kill switch", { error: error.message });
+      logger.error("Failed to deactivate kill switch", { error: error instanceof Error ? error.message : String(error) });
       throw error;
     }
   }
@@ -164,10 +164,10 @@ export const healthCheckJob = inngest.createFunction(
     name: "System Health Check",
     retries: 1,
   },
-  {
-    event: "tiktok/system.health_check",
-    cron: "*/5 * * * *", // Every 5 minutes
-  },
+  [
+    { event: "tiktok/system.health_check" },
+    { cron: "*/5 * * * *" } // Every 5 minutes
+  ],
   async ({ event, step, logger }) => {
     logger.info("Starting system health check");
 
@@ -249,7 +249,8 @@ export const healthCheckJob = inngest.createFunction(
 
         // Alert if no recent discoveries (over 30 minutes)
         if (healthData.lastSuccessfulDiscovery) {
-          const minutesSinceDiscovery = (now.getTime() - healthData.lastSuccessfulDiscovery.getTime()) / (1000 * 60);
+          const discoveryDate = new Date(healthData.lastSuccessfulDiscovery);
+          const minutesSinceDiscovery = (now.getTime() - discoveryDate.getTime()) / (1000 * 60);
           if (minutesSinceDiscovery > 30) {
             alerts.push({
               type: "error",
@@ -260,7 +261,8 @@ export const healthCheckJob = inngest.createFunction(
 
         // Alert if no recent harvesting (over 60 minutes)
         if (healthData.lastSuccessfulHarvest) {
-          const minutesSinceHarvest = (now.getTime() - healthData.lastSuccessfulHarvest.getTime()) / (1000 * 60);
+          const harvestDate = new Date(healthData.lastSuccessfulHarvest);
+          const minutesSinceHarvest = (now.getTime() - harvestDate.getTime()) / (1000 * 60);
           if (minutesSinceHarvest > 60) {
             alerts.push({
               type: "error",
@@ -313,8 +315,8 @@ export const healthCheckJob = inngest.createFunction(
 
     } catch (error) {
       logger.error("Health check failed", {
-        error: error.message,
-        stack: error.stack
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined
       });
 
       throw error;
@@ -381,7 +383,7 @@ export const deadLetterQueueJob = inngest.createFunction(
 
     } catch (error) {
       logger.error("Dead letter queue processing failed", {
-        error: error.message,
+        error: error instanceof Error ? error.message : String(error),
         originalEventName,
         attempt
       });
@@ -430,7 +432,7 @@ export const jobStatusJob = inngest.createFunction(
 
     } catch (error) {
       logger.error("Job status update failed", {
-        error: error.message,
+        error: error instanceof Error ? error.message : String(error),
         jobId,
         status
       });
@@ -447,10 +449,10 @@ export const maintenanceCleanupJob = inngest.createFunction(
     name: "Maintenance Data Cleanup",
     retries: 1,
   },
-  {
-    event: "tiktok/maintenance.cleanup",
-    cron: "0 2 * * 0", // Weekly at 2 AM on Sunday
-  },
+  [
+    { event: "tiktok/maintenance.cleanup" },
+    { cron: "0 2 * * 0" } // Weekly at 2 AM on Sunday
+  ],
   async ({ event, step, logger }) => {
     const { daysToKeep = 90 } = event.data;
 
@@ -512,8 +514,8 @@ export const maintenanceCleanupJob = inngest.createFunction(
 
     } catch (error) {
       logger.error("Maintenance cleanup failed", {
-        error: error.message,
-        stack: error.stack,
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
         daysToKeep
       });
 

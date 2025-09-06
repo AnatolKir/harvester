@@ -18,8 +18,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { useAuth } from "@/lib/supabase";
-import { authUtils } from "@/lib/supabase";
+import { useAuth } from "@/lib/supabase/hooks";
+import { authUtils } from "@/lib/supabase/auth-client";
 
 interface UserMenuProps {
   className?: string;

@@ -57,6 +57,9 @@ export type Events = {
   "tiktok/system.kill_switch": {
     data: KillSwitchPayload;
   };
+  "tiktok/system.deactivate_kill_switch": {
+    data: KillSwitchPayload;
+  };
   "tiktok/system.retry": {
     data: RetryPayload;
   };

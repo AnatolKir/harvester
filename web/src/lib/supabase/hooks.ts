@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { User, Session, AuthError } from "@supabase/supabase-js";
-import { auth, type SignInData, type SignUpData } from "./auth";
+import { auth, type SignInData, type SignUpData } from "./auth-client";
 import { sessionManager } from "./session";
 
 export interface AuthState {
@@ -86,7 +86,7 @@ export function useAuth(): UseAuthReturn {
         }
 
         // Set up auth state listener
-        subscription = auth.onAuthStateChange(async (event, session) => {
+        const authSubscription = auth.onAuthStateChange(async (event, session) => {
           if (!mounted.current) return;
 
           // Clear previous auto-refresh when session changes
@@ -123,6 +123,8 @@ export function useAuth(): UseAuthReturn {
             );
           }
         });
+        
+        subscription = authSubscription.data?.subscription || authSubscription;
       } catch (error) {
         safeSetState({
           error: error as AuthError,

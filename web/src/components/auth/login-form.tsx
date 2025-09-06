@@ -6,8 +6,8 @@ import { Eye, EyeOff, Loader2, Mail, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useAuth } from "@/lib/supabase";
-import { authUtils } from "@/lib/supabase";
+import { useAuth } from "@/lib/supabase/hooks";
+import { authUtils } from "@/lib/supabase/auth-client";
 import type { SignInFormData } from "@/types";
 
 interface LoginFormProps {
@@ -98,7 +98,7 @@ export function LoginForm({
     setResetLoading(true);
 
     try {
-      const { auth } = await import("@/lib/supabase");
+      const { auth } = await import("@/lib/supabase/auth-client");
       await auth.resetPassword(resetEmail);
       setResetSent(true);
     } catch (error) {
