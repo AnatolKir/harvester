@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Search, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { UserMenu } from "@/components/auth";
 
 export function Header() {
   return (
@@ -55,6 +56,7 @@ export function Header() {
               />
             </div>
           </div>
+          <UserMenu />
         </div>
       </div>
     </header>

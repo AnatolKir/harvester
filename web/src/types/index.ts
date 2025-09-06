@@ -76,3 +76,116 @@ export interface TableProps<T = Record<string, unknown>> {
     onSort: (key: keyof T) => void;
   };
 }
+
+// Authentication Types
+export interface AuthUser {
+  id: string;
+  email: string;
+  email_confirmed_at?: string | null;
+  phone?: string | null;
+  created_at: string;
+  updated_at: string;
+  last_sign_in_at?: string | null;
+  app_metadata: Record<string, unknown>;
+  user_metadata: Record<string, unknown>;
+}
+
+export interface AuthSession {
+  access_token: string;
+  refresh_token: string;
+  expires_in: number;
+  expires_at: number;
+  token_type: string;
+  user: AuthUser;
+}
+
+export interface SignUpCredentials {
+  email: string;
+  password: string;
+  options?: {
+    data?: Record<string, unknown>;
+    emailRedirectTo?: string;
+    captchaToken?: string;
+  };
+}
+
+export interface SignInCredentials {
+  email: string;
+  password: string;
+}
+
+export interface AuthError {
+  message: string;
+  status?: number;
+  code?: string;
+}
+
+export interface AuthState {
+  user: AuthUser | null;
+  session: AuthSession | null;
+  loading: boolean;
+  error: AuthError | null;
+}
+
+export interface ResetPasswordCredentials {
+  email: string;
+  options?: {
+    redirectTo?: string;
+    captchaToken?: string;
+  };
+}
+
+export interface UpdatePasswordCredentials {
+  password: string;
+}
+
+export interface AuthContextType extends AuthState {
+  signUp: (
+    credentials: SignUpCredentials
+  ) => Promise<{ error: AuthError | null }>;
+  signIn: (
+    credentials: SignInCredentials
+  ) => Promise<{ error: AuthError | null }>;
+  signOut: () => Promise<{ error: AuthError | null }>;
+  resetPassword: (
+    credentials: ResetPasswordCredentials
+  ) => Promise<{ error: AuthError | null }>;
+  updatePassword: (
+    credentials: UpdatePasswordCredentials
+  ) => Promise<{ error: AuthError | null }>;
+  refresh: () => Promise<void>;
+  clearError: () => void;
+}
+
+// Form Types
+export interface SignInFormData {
+  email: string;
+  password: string;
+}
+
+export interface SignUpFormData {
+  email: string;
+  password: string;
+  confirmPassword: string;
+}
+
+export interface ResetPasswordFormData {
+  email: string;
+}
+
+export interface UpdatePasswordFormData {
+  password: string;
+  confirmPassword: string;
+}
+
+// Route Protection Types
+export interface ProtectedRouteProps {
+  children: React.ReactNode;
+  requireAuth?: boolean;
+  redirectTo?: string;
+}
+
+export interface RouteGuardProps {
+  children: React.ReactNode;
+  fallback?: React.ReactNode;
+}

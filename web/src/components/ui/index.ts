@@ -59,6 +59,9 @@ export {
 // Input component
 export { Input, type InputProps } from "./input";
 
+// Label component
+export { Label } from "./label";
+
 // Pagination components
 export {
   Pagination,
