@@ -22,15 +22,22 @@ Set up the PostgreSQL database schema in Supabase with the following core tables
 
 Implement Row-Level Security (RLS) policies for all tables.
 
-## Subagent to Use
+## Subagents to Use
 
-Invoke the **Task** subagent with type "general-purpose" to:
+1. First, invoke the **database-specialist** agent (.claude/agents/database-specialist.md) to:
+   - Design the core table structure
+   - Define foreign key relationships
+   - Create proper indexes for performance
+   - Implement RLS policies
 
-- Create SQL migration files in /supabase/migrations/
-- Define all table schemas with proper indexes
-- Implement RLS policies for security
-- Create necessary SQL views for the dashboard
-- Generate seed data script
+2. Then, invoke the **schema-designer** agent (.claude/agents/schema-designer.md) to:
+   - Create SQL migration files in /supabase/migrations/
+   - Design optimized column types and constraints
+   - Create SQL views for the dashboard
+
+3. Finally, invoke the **data-seeder** agent (.claude/agents/data-seeder.md) to:
+   - Generate realistic seed data script
+   - Create test data for all tables
 
 ## Success Criteria
 

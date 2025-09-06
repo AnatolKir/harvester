@@ -35,10 +35,14 @@ worker: env-check
 	@cd worker && python main.py
 
 db-push: env-check
-	@if [ -z "$$SUPABASE_URL" ]; then echo "Set SUPABASE_URL in .env"; exit 1; fi
-	@if [ ! -f "supabase/schema.sql" ]; then echo "Missing supabase/schema.sql"; exit 1; fi
-	@echo "==> Pushing schema to Supabase"
-	@psql "$$SUPABASE_URL" -f supabase/schema.sql
+	@if [ -z "$$DATABASE_URL" ]; then echo "Set DATABASE_URL in .env"; exit 1; fi
+	@if [ ! -d "supabase/migrations" ]; then echo "Missing supabase/migrations directory"; exit 1; fi
+	@echo "==> Pushing migrations to Supabase"
+	@for file in supabase/migrations/*.sql; do \
+		echo "Applying $$file..."; \
+		psql "$$DATABASE_URL" -f "$$file" || exit 1; \
+	done
+	@echo "==> All migrations applied successfully"
 
 db-seed: env-check
 	@if [ -z "$$SUPABASE_URL" ] || [ -z "$$SUPABASE_SERVICE_ROLE_KEY" ]; then echo "Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in .env"; exit 1; fi

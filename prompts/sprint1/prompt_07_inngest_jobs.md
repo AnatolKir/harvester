@@ -21,16 +21,24 @@ Set up Inngest job scheduling:
 - Add job monitoring utilities
 - Create kill switch mechanism
 
-## Subagent to Use
+## Subagents to Use
 
-Invoke the **Task** subagent with type "general-purpose" to:
+1. Invoke the **inngest-specialist** agent (.claude/agents/inngest-specialist.md) to:
+   - Initialize Inngest client in /inngest/
+   - Create job definitions for discovery and harvesting
+   - Set up cron schedules and retry policies
+   - Implement webhook handler in Next.js
 
-- Initialize Inngest client in /inngest/
-- Create job definitions for discovery and harvesting
-- Set up cron schedules and retry policies
-- Implement webhook handler in Next.js
-- Add job status tracking
-- Create emergency stop functionality
+2. Then invoke the **queue-manager** agent (.claude/agents/queue-manager.md) to:
+   - Add job status tracking
+   - Implement dead letter queue
+   - Create priority queuing logic
+   - Set up job dependencies
+
+3. Finally invoke the **performance-monitor** agent (.claude/agents/performance-monitor.md) to:
+   - Create emergency stop functionality
+   - Add job performance metrics
+   - Set up monitoring and alerting
 
 ## Success Criteria
 

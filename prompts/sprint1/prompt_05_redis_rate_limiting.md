@@ -21,16 +21,19 @@ Set up rate limiting infrastructure:
 - Implement global limits for TikTok API calls
 - Add rate limit headers to responses
 
-## Subagent to Use
+## Subagents to Use
 
-Invoke the **Task** subagent with type "general-purpose" to:
+1. Invoke the **rate-limiter** agent (.claude/agents/rate-limiter.md) to:
+   - Set up Upstash Redis client in /web/lib/rate-limit/
+   - Implement token bucket pattern for rate limiting
+   - Create reusable rate limiting utilities
+   - Add middleware for API routes
+   - Configure different limits for different operations
 
-- Set up Upstash Redis client in /web/lib/rate-limit/
-- Implement token bucket pattern for rate limiting
-- Create reusable rate limiting utilities
-- Add middleware for API routes
-- Configure different limits for different operations
-- Add monitoring and logging for rate limit hits
+2. Then invoke the **rate-limit-monitor** agent (.claude/agents/rate-limit-monitor.md) to:
+   - Add monitoring and logging for rate limit hits
+   - Set up rate limit metrics and dashboards
+   - Create alerting for abuse patterns
 
 ## Success Criteria
 

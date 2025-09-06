@@ -25,16 +25,20 @@ Implement and test all Makefile commands:
 - make deploy-worker - Deploy worker
 - make clean - Remove caches
 
-## Subagent to Use
+## Subagents to Use
 
-Invoke the **Task** subagent with type "general-purpose" to:
+1. Invoke the **makefile-executor** agent (.claude/agents/makefile-executor.md) to:
+   - Review and update existing Makefile
+   - Ensure all commands work correctly
+   - Add error handling to commands
+   - Create composite commands for common workflows
+   - Add help documentation to Makefile
+   - Test each command thoroughly
 
-- Review and update existing Makefile
-- Ensure all commands work correctly
-- Add error handling to commands
-- Create composite commands for common workflows
-- Add help documentation to Makefile
-- Test each command thoroughly
+2. Then invoke the **deployment-manager** agent (.claude/agents/deployment-manager.md) to:
+   - Configure deployment commands
+   - Set up CI/CD integration
+   - Add dry-run options for safety
 
 ## Success Criteria
 

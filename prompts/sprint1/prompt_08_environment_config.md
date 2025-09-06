@@ -21,16 +21,19 @@ Configure environment variables:
 - Create environment type definitions
 - Set up different configs for dev/staging/prod
 
-## Subagent to Use
+## Subagents to Use
 
-Invoke the **Task** subagent with type "general-purpose" to:
+1. Invoke the **env-manager** agent (.claude/agents/env-manager.md) to:
+   - Create comprehensive .env.example file
+   - Implement environment variable validation
+   - Add TypeScript types for environment
+   - Create utility functions for env access
+   - Set up environment validation on startup
 
-- Create comprehensive .env.example file
-- Implement environment variable validation
-- Add TypeScript types for environment
-- Create utility functions for env access
-- Document all variables in README
-- Set up environment validation on startup
+2. Then invoke the **security-auditor** agent (.claude/agents/security-auditor.md) to:
+   - Verify no hardcoded secrets
+   - Check for sensitive data exposure
+   - Validate security best practices
 
 ## Success Criteria
 

@@ -39,6 +39,11 @@ make deploy-worker # Deploy worker (Railway/Fly)
 make clean        # Remove caches and build artifacts
 ```
 
+## Development Agents
+
+Custom agents available in .claude/agents/ for specialized tasks.
+Run with @agent-name or use the agent picker.
+
 ## Database Schema
 
 Core tables:

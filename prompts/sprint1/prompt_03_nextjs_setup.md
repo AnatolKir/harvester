@@ -21,16 +21,19 @@ Set up the Next.js application structure:
 - Create base layout and navigation structure
 - Configure path aliases
 
-## Subagent to Use
+## Subagents to Use
 
-Invoke the **Task** subagent with type "general-purpose" to:
+1. Invoke the **ui-designer** agent (.claude/agents/ui-designer.md) to:
+   - Initialize Next.js project structure in /web
+   - Configure Tailwind CSS with custom theme
+   - Set up responsive design patterns
+   - Create base layout components
 
-- Run Next.js initialization commands
-- Configure Tailwind CSS with proper content paths
-- Set up shadcn/ui with theme configuration
-- Create base layout components
-- Configure TypeScript paths in tsconfig.json
-- Set up linting and formatting rules
+2. Then invoke the **component-generator** agent (.claude/agents/component-generator.md) to:
+   - Install and configure shadcn/ui components
+   - Create reusable UI components
+   - Build navigation and layout components
+   - Set up loading and error states
 
 ## Success Criteria
 

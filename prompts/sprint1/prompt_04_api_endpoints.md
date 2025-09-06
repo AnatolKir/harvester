@@ -22,16 +22,24 @@ Implement core API endpoints:
 
 All endpoints must use Supabase for data access and respect authentication.
 
-## Subagent to Use
+## Subagents to Use
 
-Invoke the **Task** subagent with type "general-purpose" to:
+1. Invoke the **api-builder** agent (.claude/agents/api-builder.md) to:
+   - Create route handlers in /web/app/api/
+   - Implement proper request/response handling
+   - Add input validation using zod
+   - Include error handling and status codes
+   - Set up CORS headers for worker communication
 
-- Create route handlers in /web/app/api/
-- Implement proper request/response handling
-- Add input validation using zod
-- Include error handling and status codes
-- Set up CORS headers for worker communication
-- Add TypeScript types for all responses
+2. Then invoke the **api-documenter** agent (.claude/agents/api-documenter.md) to:
+   - Add TypeScript types for all responses
+   - Generate API documentation
+   - Create example requests and responses
+
+3. Finally invoke the **data-validator** agent (.claude/agents/data-validator.md) to:
+   - Validate input schemas
+   - Ensure data consistency
+   - Check for SQL injection protection
 
 ## Success Criteria
 

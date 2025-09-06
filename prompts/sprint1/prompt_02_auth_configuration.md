@@ -22,15 +22,24 @@ Implement email-only authentication using Supabase Auth:
 
 No social logins or phone authentication required for MVP.
 
-## Subagent to Use
+## Subagents to Use
 
-Invoke the **Task** subagent with type "general-purpose" to:
+1. Invoke the **auth-specialist** agent (.claude/agents/auth-specialist.md) to:
+   - Create Supabase client configuration in /web/lib/supabase/
+   - Implement authentication hooks using Next.js App Router patterns
+   - Set up middleware for protected routes
+   - Add session persistence and refresh logic
+   - Configure RLS policies for authenticated users
 
-- Create Supabase client configuration in /web/lib/supabase/
-- Implement authentication hooks using Next.js App Router patterns
-- Set up middleware for protected routes
-- Create login and signup components
-- Add session persistence and refresh logic
+2. Then invoke the **component-generator** agent (.claude/agents/component-generator.md) to:
+   - Create login and signup components
+   - Build authentication forms with proper validation
+   - Add loading states and error handling
+
+3. Finally invoke the **security-auditor** agent (.claude/agents/security-auditor.md) to:
+   - Verify no authentication bypass vulnerabilities
+   - Check for secure session handling
+   - Validate CSRF protection
 
 ## Success Criteria
 

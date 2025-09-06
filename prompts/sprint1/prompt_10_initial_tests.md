@@ -22,16 +22,26 @@ Implement comprehensive test coverage:
 - Rate limiting tests
 - Environment validation tests
 
-## Subagent to Use
+## Subagents to Use
 
-Invoke the **code-reviewer** subagent to:
+1. First invoke the **test-runner** agent (.claude/agents/test-runner.md) to:
+   - Set up Jest for Next.js testing
+   - Configure Pytest for Python worker
+   - Create unit tests for all components
+   - Write integration tests for APIs
+   - Ensure 70%+ code coverage
 
-- Review all code from sprint 1
-- Identify critical paths needing tests
-- Create comprehensive test suite
-- Ensure 70%+ code coverage
-- Add CI/CD test configuration
-- Fix any issues found during testing
+2. Then invoke the **e2e-tester** agent (.claude/agents/e2e-tester.md) to:
+   - Create end-to-end test scenarios
+   - Test authentication flows
+   - Validate user journeys
+   - Test cross-service integrations
+
+3. Finally invoke the **code-reviewer** agent (.claude/agents/code-reviewer.md) to:
+   - Review all code from sprint 1
+   - Identify critical paths needing tests
+   - Fix any issues found during testing
+   - Validate code quality standards
 
 ## Success Criteria
 

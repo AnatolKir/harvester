@@ -23,16 +23,25 @@ Initialize Python worker environment:
 
 No actual scraping logic yet - just infrastructure.
 
-## Subagent to Use
+## Subagents to Use
 
-Invoke the **Task** subagent with type "general-purpose" to:
+1. Invoke the **worker-developer** agent (.claude/agents/worker-developer.md) to:
+   - Create Python project structure in /worker/
+   - Set up requirements.txt with necessary packages
+   - Implement base worker class with Playwright
+   - Add Supabase client for data storage
+   - Create browser pool management
+   - Implement graceful shutdown handling
 
-- Create Python project structure in /worker/
-- Set up requirements.txt with necessary packages
-- Implement base worker class with Playwright
-- Add Supabase client for data storage
-- Create browser pool management
-- Implement graceful shutdown handling
+2. Then invoke the **scraper-optimizer** agent (.claude/agents/scraper-optimizer.md) to:
+   - Configure anti-detection measures
+   - Set up browser rotation strategies
+   - Optimize memory usage for long-running processes
+
+3. Finally invoke the **health-checker** agent (.claude/agents/health-checker.md) to:
+   - Create health check endpoint
+   - Add monitoring and logging
+   - Set up crash recovery mechanisms
 
 ## Success Criteria
 
