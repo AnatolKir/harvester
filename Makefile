@@ -100,6 +100,11 @@ env-check: ## Check environment configuration
 	else \
 		echo "$(GREEN)✅ Redis configuration found$(RESET)"; \
 	fi
+	@if [ -z "$$MCP_BASE_URL" ] || [ -z "$$BRIGHTDATA_MCP_API_KEY" ]; then \
+		echo "$(YELLOW)⚠️  Warning: Missing MCP configuration (MCP_BASE_URL/BRIGHTDATA_MCP_API_KEY)$(RESET)"; \
+	else \
+		echo "$(GREEN)✅ MCP configuration found$(RESET)"; \
+	fi
 
 check-deps: ## Verify all dependencies are installed
 	@echo "$(BLUE)==> Checking system dependencies$(RESET)"
@@ -351,8 +356,8 @@ pre-deploy-check: env-check ## Run pre-deployment checks
 validate-env-vars: ## Validate required environment variables
 	@echo "$(BLUE)==> Validating environment variables$(RESET)"
 	@missing=0; \
-	for var in NEXT_PUBLIC_SUPABASE_URL NEXT_PUBLIC_SUPABASE_ANON_KEY SUPABASE_SERVICE_ROLE_KEY; do \
-		if [ -z "$$(eval echo \$$$$var)" ]; then \
+	for var in NEXT_PUBLIC_SUPABASE_URL NEXT_PUBLIC_SUPABASE_ANON_KEY SUPABASE_SERVICE_ROLE_KEY MCP_BASE_URL BRIGHTDATA_MCP_API_KEY; do \
+		if [ -z "$$$(eval echo \$$$$var)" ]; then \
 			echo "$(RED)❌ Missing: $$var$(RESET)"; \
 			missing=$$((missing + 1)); \
 		else \

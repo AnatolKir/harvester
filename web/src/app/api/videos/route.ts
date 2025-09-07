@@ -38,21 +38,12 @@ async function handleVideosGet(request: NextRequest) {
   const supabase = await createClient();
 
   // Build the base query with domain information
-  let query = supabase.from("video").select(`
-      *,
-      domain_mentions:domain_mention!inner(
-        domain:domain(
-          id,
-          domain,
-          mention_count
-        )
-      )
-    `);
+  let query = supabase.from("video").select("*");
 
   // Apply search filter
   if (search) {
     query = query.or(
-      `title.ilike.%${search}%,description.ilike.%${search}%,tiktok_id.ilike.%${search}%`
+      `title.ilike.%${search}%,description.ilike.%${search}%,video_id.ilike.%${search}%`
     );
   }
 
@@ -101,9 +92,8 @@ async function handleVideosGet(request: NextRequest) {
       // Get domain count for this video
       const { count: domainCount, error: domainCountError } = await supabase
         .from("domain_mention")
-        .select("domain_id", { count: "exact", head: true })
-        .eq("source_id", video.id)
-        .eq("source_type", "video");
+        .select("*", { count: "exact", head: true })
+        .eq("video_id", video.video_id);
 
       if (domainCountError) {
         console.warn(
@@ -113,42 +103,24 @@ async function handleVideosGet(request: NextRequest) {
       }
 
       // Get comment domain count
-      const { count: commentDomainCount, error: commentDomainError } =
-        await supabase
-          .from("domain_mention")
-          .select("*", { count: "exact", head: true })
-          .in("source_id", [
-            // Subquery to get comment IDs for this video
-          ])
-          .eq("source_type", "comment");
+      // Note: comment domain counts are included in domain mentions per canonical schema
 
       // Simplified approach - get domains mentioned in this video's context
       const { data: domainsData, error: domainsError } = await supabase
         .from("domain_mention")
-        .select(
-          `
-          domain:domain(
-            id,
-            domain,
-            mention_count
-          )
-        `
-        )
-        .or(
-          `source_id.eq.${video.id},source_id.in.(select id from comment where video_id = '${video.id}')`
-        )
-        .limit(10); // Limit to top 10 domains per video
+        .select("domain")
+        .eq("video_id", video.video_id)
+        .limit(100);
 
-      const uniqueDomains =
-        domainsData?.reduce(
-          (acc, item) => {
-            if (item.domain && !acc.find((d) => d.id === item.domain.id)) {
-              acc.push(item.domain);
-            }
-            return acc;
-          },
-          [] as Array<{ id: string; domain: string; mention_count: number }>
-        ) || [];
+      const domainCounts: Record<string, number> = {};
+      (domainsData || []).forEach((row: any) => {
+        const dom = row.domain as string | null;
+        if (dom) domainCounts[dom] = (domainCounts[dom] || 0) + 1;
+      });
+      const uniqueDomains = Object.entries(domainCounts)
+        .map(([domain, mention_count]) => ({ id: domain, domain, mention_count }))
+        .sort((a, b) => b.mention_count - a.mention_count)
+        .slice(0, 10);
 
       return {
         ...video,

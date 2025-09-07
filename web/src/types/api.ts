@@ -80,10 +80,10 @@ export interface DomainFilters
     SortParams {
   sortBy?:
     | "domain"
-    | "first_seen_at"
-    | "last_seen_at"
-    | "mention_count"
-    | "unique_video_count";
+    | "first_seen"
+    | "last_seen"
+    | "total_mentions"
+    | "unique_videos";
 }
 
 // Combined filter parameters for videos
@@ -107,12 +107,12 @@ export type DomainMention =
 export interface DomainDetails extends Domain {
   recent_mentions: Array<{
     id: string;
-    source_type: "video" | "comment";
-    context: string | null;
+    comment_id?: string | null;
+    video_id?: string | null;
     created_at: string;
     video?: {
       id: string;
-      tiktok_id: string;
+      video_id: string;
       title: string | null;
       url: string;
     };
@@ -122,7 +122,7 @@ export interface DomainDetails extends Domain {
       author_username: string;
       video: {
         id: string;
-        tiktok_id: string;
+        video_id: string;
         title: string | null;
         url: string;
       };

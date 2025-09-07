@@ -1,6 +1,8 @@
 import { inngest } from "../client";
 import { Events, JobResult, VideoDiscoveryPayload } from "../types";
 import { createClient } from "@supabase/supabase-js";
+import { MCPClient } from "../../web/src/lib/mcp/client";
+import { fetchPromotedVideoIds } from "../../web/src/lib/mcp/discovery";
 
 const supabase = createClient(
   process.env.SUPABASE_URL!,
@@ -63,44 +65,37 @@ export const videoDiscoveryJob = inngest.createFunction(
         });
       });
 
-      // Step 3: Discover promoted videos
+      // Step 3: Discover promoted videos via MCP
       const discoveryResult = await step.run("discover-videos", async () => {
-        try {
-          // Call the worker service to discover videos
-          const workerUrl = process.env.WORKER_WEBHOOK_URL;
-          if (!workerUrl) {
-            throw new Error("WORKER_WEBHOOK_URL not configured");
-          }
+        const mcp = new MCPClient({
+          baseUrl: process.env.MCP_BASE_URL!,
+          apiKey: process.env.BRIGHTDATA_MCP_API_KEY!,
+          stickyMinutes: parseInt(process.env.MCP_STICKY_SESSION_MINUTES || "10"),
+        });
+        const items = await fetchPromotedVideoIds(mcp, { region: "US", windowHours: 6, pageSize: limit });
 
-          const response = await fetch(`${workerUrl}/discover`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "Authorization": `Bearer ${process.env.WORKER_API_KEY || 'development'}`
-            },
-            body: JSON.stringify({
-              videoId,
-              forceRefresh,
-              limit
-            })
-          });
-
-          if (!response.ok) {
-            throw new Error(`Worker discovery failed: ${response.status} ${response.statusText}`);
-          }
-
-          const result = await response.json();
-          
-          logger.info("Video discovery completed", {
-            videosFound: result.videosFound || 0,
-            newVideos: result.newVideos || 0
-          });
-
-          return result;
-        } catch (error) {
-          logger.error("Discovery step failed", { error: error instanceof Error ? error.message : String(error) });
-          throw error;
+        // Insert videos
+        let newVideos = 0;
+        for (const v of items) {
+          const { error } = await supabase
+            .from("video")
+            .upsert(
+              {
+                video_id: v.video_id,
+                url: v.url,
+                is_promoted: true,
+              },
+              { onConflict: "video_id" }
+            );
+          if (!error) newVideos++;
         }
+
+        logger.info("Video discovery completed", {
+          videosFound: items.length,
+          newVideos,
+        });
+
+        return { videosFound: items.length, newVideos, videoIds: items.map((i) => i.video_id) };
       });
 
       // Step 4: Trigger harvesting for new videos

@@ -70,6 +70,26 @@ This project uses environment variables for configuration. All sensitive keys an
 - **INNGEST_SIGNING_KEY**: Signing key for webhook validation
 - **INNGEST_APP_ID**: Application ID (defaults to 'tiktok-harvester')
 
+### MCP (Bright Data) Configuration
+
+- **BRIGHTDATA_MCP_API_KEY**: API key for MCP server authentication
+  - Example: `bd_xxx`
+  - Alias: will also read `API_TOKEN` if set (convenience for local MCP configs)
+- **MCP_BASE_URL**: Base URL for the MCP server
+  - Example: `https://mcp.example.com`
+  - Dev convenience: defaults to `http://localhost:3333` if unset
+- **MCP_STICKY_SESSION_MINUTES**: Sticky session TTL in minutes (default 10)
+- **DISCOVERY_RPM**: Max discovery requests per minute (default 30)
+- **COMMENTS_RPM**: Max comments fetch requests per minute (default 60)
+
+### Legacy (Deprecated) Playwright Proxy Variables
+
+These are retained for backward compatibility but no longer used in the MCP-based pipeline:
+
+- `PROXY_URL`
+- `PROXY_USERNAME`
+- `PROXY_PASSWORD`
+
 ## Environment-Specific Configurations
 
 The application supports three environments:

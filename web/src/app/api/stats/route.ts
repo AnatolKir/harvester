@@ -70,12 +70,8 @@ async function handleStatsGet(request: NextRequest) {
       .eq("scrape_status", "completed")
       .gte("last_scraped_at", sevenDaysAgo.toISOString()),
 
-    // Trending domains - try to use the view, fallback to manual query
-    supabase
-      .from("v_domains_trending")
-      .select("*")
-      .order("growth_rate", { ascending: false })
-      .limit(5),
+    // Trending domains via canonical view
+    supabase.from("v_domains_trending").select("*").order("mentions_7d", { ascending: false }).limit(5),
 
     // Most recent job log entry
     supabase
@@ -118,26 +114,24 @@ async function handleStatsGet(request: NextRequest) {
   }> = [];
 
   if (trendingResult.status === "fulfilled" && trendingResult.value.data) {
-    trending = trendingResult.value.data.map((item) => ({
+    trending = trendingResult.value.data.map((item: any) => ({
       domain: item.domain || "",
-      growth: Math.round((item.growth_rate || 0) * 100),
-      mentions: item.mention_count || 0,
-      domain_id: item.id,
+      growth: 0,
+      mentions: item.mentions_7d || 0,
     }));
   } else {
     // Fallback: get top domains by mention count
     const fallbackTrending = await supabase
-      .from("domain")
-      .select("id, domain, mention_count")
-      .order("mention_count", { ascending: false })
+      .from("v_domains_heating")
+      .select("domain, total_mentions, unique_videos")
+      .order("total_mentions", { ascending: false })
       .limit(5);
 
     if (fallbackTrending.data) {
-      trending = fallbackTrending.data.map((item) => ({
+      trending = fallbackTrending.data.map((item: any) => ({
         domain: item.domain,
-        growth: 0, // No growth calculation in fallback
-        mentions: item.mention_count,
-        domain_id: item.id,
+        growth: 0,
+        mentions: item.total_mentions || 0,
       }));
     }
   }

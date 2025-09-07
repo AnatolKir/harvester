@@ -23,12 +23,12 @@ export const SortSchema = z.object({
   sortBy: z
     .enum([
       "domain",
-      "first_seen_at",
-      "last_seen_at",
-      "mention_count",
-      "unique_video_count",
+      "first_seen",
+      "last_seen",
+      "total_mentions",
+      "unique_videos",
     ])
-    .default("last_seen_at"),
+    .default("last_seen"),
   sortOrder: z.enum(["asc", "desc"]).default("desc"),
 });
 
@@ -72,10 +72,10 @@ export const WorkerWebhookSchema = z.object({
 export const DomainResponseSchema = z.object({
   id: z.string(),
   domain: z.string(),
-  first_seen_at: z.string(),
-  last_seen_at: z.string(),
-  mention_count: z.number(),
-  unique_video_count: z.number(),
+  first_seen: z.string(),
+  last_seen: z.string(),
+  total_mentions: z.number(),
+  unique_videos: z.number(),
   unique_author_count: z.number(),
   is_suspicious: z.boolean(),
   is_active: z.boolean(),
@@ -83,7 +83,7 @@ export const DomainResponseSchema = z.object({
 
 export const VideoResponseSchema = z.object({
   id: z.string(),
-  tiktok_id: z.string(),
+  video_id: z.string(),
   url: z.string(),
   title: z.string().nullable(),
   description: z.string().nullable(),

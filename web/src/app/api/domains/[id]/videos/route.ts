@@ -98,7 +98,7 @@ export async function GET(
     const mockVideos: VideoWithStats[] = [
       {
         id: "video-1",
-        tiktok_id: "tiktok-video-1",
+        video_id: "tiktok-video-1",
         url: "https://www.tiktok.com/@user/video/1234567890123456789",
         title: "Summer Fashion Haul 2024",
         description: "Check out my latest summer finds! Links in comments",
@@ -116,7 +116,7 @@ export async function GET(
       },
       {
         id: "video-2",
-        tiktok_id: "tiktok-video-2",
+        video_id: "tiktok-video-2",
         url: "https://www.tiktok.com/@user2/video/2345678901234567890",
         title: "Unboxing My Latest Purchase",
         description: "Excited to try this new product! What do you think?",
@@ -134,7 +134,7 @@ export async function GET(
       },
       {
         id: "video-3",
-        tiktok_id: "tiktok-video-3",
+        video_id: "tiktok-video-3",
         url: "https://www.tiktok.com/@user3/video/3456789012345678901",
         title: "Must-Have Items for Fall",
         description: "These are my top picks for the season!",
@@ -152,7 +152,7 @@ export async function GET(
       },
       {
         id: "video-4",
-        tiktok_id: "tiktok-video-4",
+        video_id: "tiktok-video-4",
         url: "https://www.tiktok.com/@user4/video/4567890123456789012",
         title: "My Daily Routine Products",
         description: "These products changed my life! Check them out",

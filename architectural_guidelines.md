@@ -1,3 +1,10 @@
+## MCP-based Discovery/Harvest (Sprint 2)
+
+- Primary data acquisition runs inside Inngest jobs (Node) using a lightweight MCP client.
+- Bright Data MCP is the initial provider; the fetch interface is pluggable for future sources.
+- The former Playwright worker path is considered legacy and retained only for rollback (see `worker/README_LEGACY.md`).
+- Environment variables include MCP_BASE_URL and BRIGHTDATA_MCP_API_KEY (alias: API_TOKEN).
+
 # Architectural Guidelines – TikTok Domain Harvester
 
 ## Philosophy

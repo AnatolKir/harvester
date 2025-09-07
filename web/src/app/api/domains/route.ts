@@ -150,7 +150,7 @@ async function handleDomainsGet(request: NextRequest) {
         threshold = new Date(0); // fallback
     }
 
-    query = query.gte("first_seen_at", threshold.toISOString());
+    query = query.gte("first_seen", threshold.toISOString());
   }
 
   // Apply sorting

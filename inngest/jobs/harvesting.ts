@@ -1,6 +1,8 @@
 import { inngest } from "../client";
 import { Events, JobResult, CommentHarvestingPayload } from "../types";
 import { createClient } from "@supabase/supabase-js";
+import { MCPClient } from "../../web/src/lib/mcp/client";
+import { fetchCommentsForVideo } from "../../web/src/lib/mcp/comments";
 
 const supabase = createClient(
   process.env.SUPABASE_URL!,
@@ -52,7 +54,7 @@ export const commentHarvestingJob = inngest.createFunction(
       const videoInfo = await step.run("verify-video", async () => {
         const { data: video, error } = await supabase
           .from("video")
-          .select("id, video_id, last_crawled_at")
+          .select("id, video_id, last_scraped_at")
           .eq("id", videoId)
           .single();
 
@@ -80,44 +82,34 @@ export const commentHarvestingJob = inngest.createFunction(
         await new Promise(resolve => setTimeout(resolve, 2000)); // 2 second delay
       });
 
-      // Step 5: Harvest comments
+      // Step 5: Harvest comments via MCP
       const harvestResult = await step.run("harvest-comments", async () => {
-        try {
-          const workerUrl = process.env.WORKER_WEBHOOK_URL;
-          if (!workerUrl) {
-            throw new Error("WORKER_WEBHOOK_URL not configured");
-          }
+        const mcp = new MCPClient({
+          baseUrl: process.env.MCP_BASE_URL!,
+          apiKey: process.env.BRIGHTDATA_MCP_API_KEY!,
+          stickyMinutes: parseInt(process.env.MCP_STICKY_SESSION_MINUTES || "10"),
+        });
+        const comments = await fetchCommentsForVideo(mcp, videoId, { maxPages });
 
-          const response = await fetch(`${workerUrl}/harvest`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "Authorization": `Bearer ${process.env.WORKER_API_KEY || 'development'}`
-            },
-            body: JSON.stringify({
-              videoId,
-              maxPages,
-              delayBetweenPages
-            })
-          });
-
-          if (!response.ok) {
-            throw new Error(`Worker harvesting failed: ${response.status} ${response.statusText}`);
-          }
-
-          const result = await response.json();
-          
-          logger.info("Comment harvesting completed", {
-            commentsHarvested: result.commentsHarvested || 0,
-            pagesProcessed: result.pagesProcessed || 0,
-            domainsExtracted: result.domainsExtracted || 0
-          });
-
-          return result;
-        } catch (error) {
-          logger.error("Harvesting step failed", { error: error instanceof Error ? error.message : String(error) });
-          throw error;
+        let inserted = 0;
+        for (const c of comments) {
+          const { error } = await supabase
+            .from("comment")
+            .upsert(
+              {
+                id: c.comment_id,
+                video_id: videoId,
+                comment_id: c.comment_id,
+                content: c.text,
+                author_username: c.user_id,
+                posted_at: c.created_at,
+              },
+              { onConflict: "id" }
+            );
+          if (!error) inserted++;
         }
+
+        return { commentsHarvested: comments.length, pagesProcessed: maxPages, domainsExtracted: 0, newComments: comments };
       });
 
       // Step 6: Update video last_crawled_at
@@ -125,7 +117,7 @@ export const commentHarvestingJob = inngest.createFunction(
         const { error } = await supabase
           .from("video")
           .update({
-            last_crawled_at: new Date().toISOString(),
+            last_scraped_at: new Date().toISOString(),
             comment_count: harvestResult.commentsHarvested
           })
           .eq("id", videoId);
@@ -141,11 +133,7 @@ export const commentHarvestingJob = inngest.createFunction(
           const extractionPromises = harvestResult.newComments.map((comment: any) =>
             inngest.send({
               name: "tiktok/domain.extract",
-              data: {
-                commentId: comment.id,
-                videoId: videoId,
-                commentText: comment.text
-              }
+              data: { commentId: comment.comment_id, videoId: videoId, commentText: comment.text }
             })
           );
 
@@ -299,7 +287,7 @@ export const domainExtractionJob = inngest.createFunction(
             const { data: existingDomain, error: selectError } = await supabase
               .from("domain")
               .select("id")
-              .eq("domain_name", domainInfo.domainName)
+              .eq("domain", domainInfo.domainName)
               .maybeSingle();
 
             let domainId;
@@ -311,11 +299,9 @@ export const domainExtractionJob = inngest.createFunction(
               const { data: newDomain, error: insertError } = await supabase
                 .from("domain")
                 .insert({
-                  domain_name: domainInfo.domainName,
-                  tld: domainInfo.tld,
-                  subdomain: domainInfo.subdomain,
-                  first_seen_at: new Date().toISOString(),
-                  last_seen_at: new Date().toISOString()
+                  domain: domainInfo.domainName,
+                  first_seen: new Date().toISOString(),
+                  last_seen: new Date().toISOString(),
                 })
                 .select("id")
                 .single();
@@ -335,13 +321,12 @@ export const domainExtractionJob = inngest.createFunction(
             const { error: mentionError } = await supabase
               .from("domain_mention")
               .insert({
-                domain_id: domainId,
+                domain: domainInfo.domainName,
                 comment_id: commentId,
                 video_id: videoId,
-                mention_text: domainInfo.originalText,
-                confidence_score: 1.0,
-                extraction_method: 'regex'
-              });
+                created_at: new Date().toISOString()
+              })
+              .onConflict('domain,video_id,comment_id');
 
             if (mentionError) {
               logger.error("Failed to create domain mention", {

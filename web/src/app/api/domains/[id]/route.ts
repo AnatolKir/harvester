@@ -85,26 +85,9 @@ type Video = Database["public"]["Tables"]["video"]["Row"];
 interface DomainDetails extends Domain {
   recent_mentions: Array<{
     id: string;
-    source_type: "video" | "comment";
-    context: string | null;
     created_at: string;
-    video?: {
-      id: string;
-      tiktok_id: string;
-      title: string | null;
-      url: string;
-    };
-    comment?: {
-      id: string;
-      content: string;
-      author_username: string;
-      video: {
-        id: string;
-        tiktok_id: string;
-        title: string | null;
-        url: string;
-      };
-    };
+    video_id?: string | null;
+    comment_id?: string | null;
   }>;
   time_series: Array<{
     date: string;
@@ -139,33 +122,8 @@ async function handleDomainGet(
   // Get recent mentions with related data
   const { data: mentions, error: mentionsError } = await supabase
     .from("domain_mention")
-    .select(
-      `
-      id,
-      source_type,
-      context,
-      created_at,
-      source_id,
-      comment:comment(
-        id,
-        content,
-        author_username,
-        video:video(
-          id,
-          tiktok_id,
-          title,
-          url
-        )
-      ),
-      video:video(
-        id,
-        tiktok_id,
-        title,
-        url
-      )
-    `
-    )
-    .eq("domain_id", id)
+    .select("id, domain, video_id, comment_id, created_at")
+    .eq("domain", domain.domain)
     .order("created_at", { ascending: false })
     .limit(20);
 
@@ -227,26 +185,11 @@ async function handleDomainGet(
   const domainDetails: DomainDetails = {
     ...domain,
     recent_mentions:
-      mentions?.map((mention) => ({
-        id: mention.id,
-        source_type: mention.source_type,
-        context: mention.context,
-        created_at: mention.created_at,
-        ...(mention.source_type === "comment" && mention.comment
-          ? {
-              comment: {
-                id: mention.comment.id,
-                content: mention.comment.content,
-                author_username: mention.comment.author_username,
-                video: mention.comment.video,
-              },
-            }
-          : {}),
-        ...(mention.source_type === "video" && mention.video
-          ? {
-              video: mention.video,
-            }
-          : {}),
+      mentions?.map((m: any) => ({
+        id: m.id,
+        created_at: m.created_at,
+        video_id: m.video_id,
+        comment_id: m.comment_id,
       })) || [],
     time_series: timeSeries,
   };

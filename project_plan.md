@@ -1,3 +1,11 @@
+### Sprint 2: MCP Pivot and Schema Reconcile
+
+- Replace Playwright proxy workflow with MCP calls executed in Inngest jobs (Node).
+- Reconcile database schema, types, and API to canonical names: `video.video_id`, `domain.domain`, and `domain_mention(domain, video_id, comment_id, created_at)`.
+- Implement MCP client (`web/src/lib/mcp/*`), and update Inngest jobs (`inngest/jobs/*`).
+- Add observability endpoints (rate-limit metrics) and apply consistent security wrappers to internal routes.
+- Mark Playwright worker as legacy (`worker/README_LEGACY.md`).
+
 # TikTok Domain Harvester – Project Plan
 
 ## Overview

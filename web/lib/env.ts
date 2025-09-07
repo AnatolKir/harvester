@@ -20,6 +20,18 @@ const envSchema = z.object({
   INNGEST_EVENT_KEY: z.string().optional(),
   INNGEST_SIGNING_KEY: z.string().optional(),
   INNGEST_APP_ID: z.string().default('tiktok-harvester'),
+
+  // MCP / Bright Data
+  BRIGHTDATA_MCP_API_KEY: z.string().min(1),
+  MCP_BASE_URL: z.string().url(),
+  MCP_STICKY_SESSION_MINUTES: z.coerce.number().int().default(10),
+  DISCOVERY_RPM: z.coerce.number().int().default(30),
+  COMMENTS_RPM: z.coerce.number().int().default(60),
+
+  // Legacy (deprecated) Playwright proxy vars (kept for backward compatibility)
+  PROXY_URL: z.string().optional(),
+  PROXY_USERNAME: z.string().optional(),
+  PROXY_PASSWORD: z.string().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;
@@ -45,6 +57,16 @@ function validateEnv(): Env {
     INNGEST_EVENT_KEY: process.env.INNGEST_EVENT_KEY,
     INNGEST_SIGNING_KEY: process.env.INNGEST_SIGNING_KEY,
     INNGEST_APP_ID: process.env.INNGEST_APP_ID,
+
+    BRIGHTDATA_MCP_API_KEY: process.env.BRIGHTDATA_MCP_API_KEY || process.env.API_TOKEN,
+    MCP_BASE_URL: process.env.MCP_BASE_URL || process.env.MCP_GATEWAY_URL || (process.env.NODE_ENV !== 'production' ? 'http://localhost:3333' : undefined as any),
+    MCP_STICKY_SESSION_MINUTES: process.env.MCP_STICKY_SESSION_MINUTES,
+    DISCOVERY_RPM: process.env.DISCOVERY_RPM,
+    COMMENTS_RPM: process.env.COMMENTS_RPM,
+
+    PROXY_URL: process.env.PROXY_URL,
+    PROXY_USERNAME: process.env.PROXY_USERNAME,
+    PROXY_PASSWORD: process.env.PROXY_PASSWORD,
   });
 
   if (!parsed.success) {
@@ -76,6 +98,17 @@ export function getServerEnv() {
     INNGEST_EVENT_KEY: env.INNGEST_EVENT_KEY,
     INNGEST_SIGNING_KEY: env.INNGEST_SIGNING_KEY,
     INNGEST_APP_ID: env.INNGEST_APP_ID,
+
+    BRIGHTDATA_MCP_API_KEY: env.BRIGHTDATA_MCP_API_KEY,
+    MCP_BASE_URL: env.MCP_BASE_URL,
+    MCP_STICKY_SESSION_MINUTES: env.MCP_STICKY_SESSION_MINUTES,
+    DISCOVERY_RPM: env.DISCOVERY_RPM,
+    COMMENTS_RPM: env.COMMENTS_RPM,
+
+    // Legacy proxy vars (deprecated)
+    PROXY_URL: env.PROXY_URL,
+    PROXY_USERNAME: env.PROXY_USERNAME,
+    PROXY_PASSWORD: env.PROXY_PASSWORD,
   };
 }
 
