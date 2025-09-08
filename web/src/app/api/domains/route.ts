@@ -1,15 +1,9 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { DomainsQuerySchema } from "@/lib/validations";
-import {
-  createPaginatedResponse,
-  createErrorResponse,
-  withErrorHandling,
-  addRateLimitHeaders,
-} from "@/lib/api";
-import type { Database } from "@/types/database";
-
-type Domain = Database["public"]["Tables"]["domain"]["Row"];
+import { createPaginatedResponse } from "@/lib/api";
+import { withValidation, AuthenticatedApiSecurity } from "@/lib/security/middleware";
+// Domain types come from view; no direct table type import here
 
 /**
  * @swagger
@@ -105,86 +99,71 @@ type Domain = Database["public"]["Tables"]["domain"]["Row"];
  *         $ref: '#/components/responses/InternalError'
  */
 
-async function handleDomainsGet(request: NextRequest) {
-  // Parse and validate query parameters
-  const searchParams = request.nextUrl.searchParams;
-  const rawParams = {
-    search: searchParams.get("search"),
-    dateFilter: searchParams.get("dateFilter"),
-    page: searchParams.get("page"),
-    limit: searchParams.get("limit"),
-    sortBy: searchParams.get("sortBy"),
-    sortOrder: searchParams.get("sortOrder"),
-  };
+export const GET = withValidation(
+  DomainsQuerySchema,
+  async (
+    _request: NextRequest,
+    { search, dateFilter, page, limit, sortBy, sortOrder },
+    _context
+  ): Promise<NextResponse> => {
+    const offset = (page - 1) * limit;
+    const supabase = await createClient();
 
-  const { search, dateFilter, page, limit, sortBy, sortOrder } =
-    DomainsQuerySchema.parse(rawParams);
-  const offset = (page - 1) * limit;
+    // Map sortBy to view columns
+    const sortColumn =
+      sortBy === "first_seen"
+        ? "first_seen"
+        : sortBy === "last_seen"
+        ? "last_seen"
+        : sortBy === "total_mentions"
+        ? "total_mentions"
+        : "last_seen"; // default
 
-  const supabase = await createClient();
+    let query = supabase
+      .from("v_domains_overview")
+      .select("domain, total_mentions, first_seen, last_seen", { count: "exact" });
 
-  // Build the query
-  let query = supabase.from("domain").select("*", { count: "exact" });
-
-  // Apply search filter
-  if (search) {
-    query = query.ilike("domain", `%${search}%`);
-  }
-
-  // Apply date filter
-  if (dateFilter !== "all") {
-    const now = new Date();
-    let threshold: Date;
-
-    switch (dateFilter) {
-      case "today":
-        threshold = new Date(now.setHours(0, 0, 0, 0));
-        break;
-      case "week":
-        threshold = new Date(now.setDate(now.getDate() - 7));
-        break;
-      case "month":
-        threshold = new Date(now.setMonth(now.getMonth() - 1));
-        break;
-      default:
-        threshold = new Date(0); // fallback
+    if (search) {
+      query = query.ilike("domain", `%${search}%`);
     }
 
-    query = query.gte("first_seen", threshold.toISOString());
-  }
+    if (dateFilter !== "all") {
+      const now = new Date();
+      let threshold: Date;
+      switch (dateFilter) {
+        case "today":
+          threshold = new Date(now.setHours(0, 0, 0, 0));
+          break;
+        case "week":
+          threshold = new Date(now.setDate(now.getDate() - 7));
+          break;
+        case "month":
+          threshold = new Date(now.setMonth(now.getMonth() - 1));
+          break;
+        default:
+          threshold = new Date(0);
+      }
+      query = query.gte("first_seen", threshold.toISOString());
+    }
 
-  // Apply sorting
-  const sortAscending = sortOrder === "asc";
-  query = query.order(sortBy, { ascending: sortAscending });
+    query = query.order(sortColumn, { ascending: sortOrder === "asc" });
+    query = query.range(offset, offset + limit - 1);
 
-  // Apply pagination
-  query = query.range(offset, offset + limit - 1);
+    const { data, error, count } = await query;
+    if (error) {
+      throw new Error(`Database query failed: ${error.message}`);
+    }
 
-  const { data, error, count } = await query;
-
-  if (error) {
-    console.error("Supabase error:", error);
-    throw new Error(`Database query failed: ${error.message}`);
-  }
-
-  const total = count || 0;
-  const totalPages = Math.ceil(total / limit);
-
-  const response = createPaginatedResponse(data || [], {
-    page,
-    limit,
-    total,
-    totalPages,
-    hasNext: page < totalPages,
-    hasPrev: page > 1,
-  });
-
-  // Add rate limit headers (placeholder values - should be integrated with actual rate limiter)
-  return addRateLimitHeaders(response, {
-    limit: 1000,
-    remaining: 999,
-    reset: Math.floor(Date.now() / 1000) + 3600,
-  });
-}
-
-export const GET = withErrorHandling(handleDomainsGet);
+    const total = count || 0;
+    const totalPages = Math.ceil(total / limit);
+    return createPaginatedResponse(data || [], {
+      page,
+      limit,
+      total,
+      totalPages,
+      hasNext: page < totalPages,
+      hasPrev: page > 1,
+    });
+  },
+  AuthenticatedApiSecurity
+);

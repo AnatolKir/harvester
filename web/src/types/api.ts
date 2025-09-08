@@ -99,6 +99,35 @@ export interface VideoFilters extends CursorPaginationParams, SearchParams {
 // Base domain type from database
 export type Domain = Database["public"]["Tables"]["domain"]["Row"];
 
+// View row: v_domains_overview
+export interface DomainOverview {
+  domain: string;
+  total_mentions: number;
+  first_seen: string;
+  last_seen: string;
+}
+
+// View row: v_domains_new_today
+export interface DomainNewToday {
+  domain: string;
+  mentions_today: number;
+}
+
+// View row: v_domain_mentions_recent
+export interface DomainMentionRecent {
+  domain: string;
+  comment_id: string;
+  video_id: string;
+  created_at: string;
+}
+
+// View row: v_pipeline_stats
+export interface PipelineStats {
+  domains_day: number;
+  comments_day: number;
+  errors_day: number;
+}
+
 // Domain mention type
 export type DomainMention =
   Database["public"]["Tables"]["domain_mention"]["Row"];
