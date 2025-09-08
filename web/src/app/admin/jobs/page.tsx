@@ -13,7 +13,10 @@ async function getJobsData(
   const qs = new URLSearchParams();
   qs.set("hours", String(hours));
   if (type) qs.set("type", type);
-  const url = `/api/admin/jobs?${qs.toString()}`;
+  const base = (
+    process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3032"
+  ).replace(/\/$/, "");
+  const url = `${base}/api/admin/jobs?${qs.toString()}`;
   const res = await fetch(url, {
     cache: "no-store",
     headers: cookieHeader ? { cookie: cookieHeader } : undefined,
