@@ -1,4 +1,7 @@
 #!/usr/bin/env sh
 . "$(dirname -- "$0")/_/husky.sh"
 
+cd web || exit 1
+npx lint-staged || exit 1
+cd .. || exit 1
 npx lint-staged
