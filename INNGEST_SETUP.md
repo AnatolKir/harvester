@@ -215,6 +215,14 @@ DELETE /api/admin/kill-switch
 
 An SSR admin page is available at `/admin/kill-switch` to view current status and toggle the global kill switch. A mandatory reason and the authenticated admin identity are recorded with each action and surfaced in `system_logs`.
 
+### Admin UI (Jobs Metrics)
+
+- Web UI path: `/admin/jobs`
+- Server-rendered page fetching from `/api/admin/jobs?hours=<24|168>&type=<optional>`
+- Shows: success rate, last successful run, DLQ size, in-progress jobs
+- Charts: jobs/hour per job type; duration averages (p50/p95 pending backend support)
+- Includes recent executions list and links to Health and Kill Switch pages
+
 ### System Configuration
 
 ```bash
