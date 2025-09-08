@@ -104,6 +104,19 @@ These read-optimized views power the UI and API.
   - Columns: `domains_day` (bigint), `comments_day` (bigint), `errors_day` (bigint)
   - Purpose: Daily pipeline counters for dashboards.
 
+## UI Pages
+
+### /videos (SSR)
+
+- Server-rendered list of videos with domain and comment aggregates.
+- Query params (server-side):
+  - `search` (string): filter by title/description/TikTok ID/URL
+  - `status` (enum): all | pending | processing | completed | failed
+  - `cursor` (string): base64 timestamp for cursor pagination
+  - `limit` (int): 1-100 (default 25)
+  - `sort` (enum): created_at | last_scraped_at (default created_at)
+  - `dir` (enum): asc | desc (default desc)
+
 ### 1. GET /api/domains
 
 List domains with pagination and filtering options.
