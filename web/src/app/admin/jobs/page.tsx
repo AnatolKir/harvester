@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,13 +7,17 @@ import type { AdminJobsData, JobMetric } from "@/types/admin";
 
 async function getJobsData(
   hours: number,
-  type?: string
+  type?: string,
+  cookieHeader?: string
 ): Promise<AdminJobsData> {
   const qs = new URLSearchParams();
   qs.set("hours", String(hours));
   if (type) qs.set("type", type);
-  const url = `${process.env.NEXT_PUBLIC_BASE_URL || ""}/api/admin/jobs?${qs.toString()}`;
-  const res = await fetch(url, { cache: "no-store" });
+  const url = `/api/admin/jobs?${qs.toString()}`;
+  const res = await fetch(url, {
+    cache: "no-store",
+    headers: cookieHeader ? { cookie: cookieHeader } : undefined,
+  });
   if (!res.ok) {
     throw new Error(`Failed to load jobs data (${res.status})`);
   }
@@ -51,17 +56,22 @@ function computeOverallSuccess(jobMetrics: JobMetric[]) {
 export default async function AdminJobsPage({
   searchParams,
 }: {
-  searchParams?: { [key: string]: string | string[] | undefined };
+  searchParams?: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
   await createClient();
-  const hoursParam = Array.isArray(searchParams?.hours)
-    ? searchParams?.hours[0]
-    : searchParams?.hours;
-  const typeParam = Array.isArray(searchParams?.type)
-    ? searchParams?.type[0]
-    : searchParams?.type;
+  const sp: Record<string, string | string[] | undefined> =
+    (await searchParams) || {};
+  const hoursRaw = sp["hours"];
+  const typeRaw = sp["type"];
+  const hoursParam = Array.isArray(hoursRaw) ? hoursRaw[0] : hoursRaw;
+  const typeParam = Array.isArray(typeRaw) ? typeRaw[0] : typeRaw;
   const hours = Math.max(1, parseInt(hoursParam || "24", 10));
-  const data = await getJobsData(hours, typeParam);
+  const cookieStore = await cookies();
+  const cookieHeader = cookieStore
+    .getAll()
+    .map((c) => `${c.name}=${c.value}`)
+    .join("; ");
+  const data = await getJobsData(hours, typeParam, cookieHeader);
 
   const overallSuccess = computeOverallSuccess(data.jobMetrics || []);
   const lastSuccessfulRun = [
