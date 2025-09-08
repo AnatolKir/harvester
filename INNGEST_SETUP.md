@@ -5,6 +5,7 @@ This document provides comprehensive instructions for setting up and using the I
 ## Overview
 
 The Inngest system provides:
+
 - **Scheduled Discovery**: TikTok video discovery every 10 minutes
 - **Comment Harvesting**: Automated comment extraction with domain parsing
 - **System Monitoring**: Health checks, job tracking, and alerting
@@ -75,6 +76,7 @@ Apply the system tables migration:
 ```
 
 This creates:
+
 - `system_config` - Kill switch and configuration
 - `job_status` - Job execution tracking
 - `system_logs` - System event logging
@@ -110,12 +112,14 @@ HARVESTING_JOB_TIMEOUT_MINUTES=60
 ### Discovery Jobs
 
 **Scheduled Discovery** (`tiktok/video.discovery.scheduled`)
+
 - **Schedule**: Every 10 minutes
 - **Purpose**: Find new promoted TikTok videos
 - **Retry Policy**: 3 attempts with exponential backoff
 - **Concurrency**: Maximum 5 concurrent jobs
 
 **Manual Discovery** (`tiktok/video.discovery.manual`)
+
 - **Trigger**: Admin API or direct event
 - **Purpose**: On-demand video discovery
 - **Parameters**: `videoId`, `forceRefresh`, `limit`
@@ -123,12 +127,14 @@ HARVESTING_JOB_TIMEOUT_MINUTES=60
 ### Harvesting Jobs
 
 **Comment Harvesting** (`tiktok/comment.harvest`)
+
 - **Trigger**: Automatically after video discovery
 - **Purpose**: Extract comments from TikTok videos
 - **Constraints**: Maximum 2 pages per video (MVP)
 - **Retry Policy**: 3 attempts with exponential backoff
 
 **Domain Extraction** (`tiktok/domain.extract`)
+
 - **Trigger**: Automatically after comment harvesting
 - **Purpose**: Parse domains from comment text
 - **Method**: Regex-based extraction
@@ -137,16 +143,19 @@ HARVESTING_JOB_TIMEOUT_MINUTES=60
 ### System Jobs
 
 **Health Check** (`tiktok/system.health_check`)
+
 - **Schedule**: Every 5 minutes
 - **Purpose**: Monitor system health and alert on issues
 - **Checks**: Job success rates, last successful runs, DLQ size
 
 **Kill Switch** (`tiktok/system.kill_switch`)
+
 - **Trigger**: Manual (emergency use only)
 - **Purpose**: Stop all job execution immediately
 - **Scope**: Affects all running and scheduled jobs
 
 **Maintenance Cleanup** (`tiktok/maintenance.cleanup`)
+
 - **Schedule**: Weekly (Sundays at 2 AM)
 - **Purpose**: Clean up old data and logs
 - **Default**: Keep 90 days of data
@@ -229,6 +238,7 @@ POST /api/admin/dead-letter-queue/retry
 ### System Health Metrics
 
 The system tracks:
+
 - **Job Success Rates**: Percentage of successful completions
 - **Execution Times**: Average and p95 job duration
 - **Queue Depths**: Pending and running job counts
@@ -238,6 +248,7 @@ The system tracks:
 ### Alert Conditions
 
 Alerts trigger when:
+
 - Kill switch is active
 - No successful discovery in 30+ minutes
 - No successful harvesting in 60+ minutes
@@ -264,19 +275,27 @@ const logs = await InngestAdmin.getRecentLogs(50);
 ### Local Development
 
 1. Start the Next.js development server:
+
 ```bash
 cd web
 npm run dev
 ```
 
 2. The Inngest webhook will be available at:
+
 ```
 http://localhost:3032/api/inngest
 ```
 
 3. Use Inngest Dev Server for local testing:
+
 ```bash
 npx inngest-dev
+#### Cloud vs Dev Quickstart
+
+- Dev: run `npx inngest-dev` and point the dev server to your Next.js webhook `http://localhost:3000/api/inngest` (serveHost defaults via INNGEST_SERVE_HOST). No signing key required when `isDev: true`.
+- Cloud: set `INNGEST_SIGNING_KEY` and `INNGEST_EVENT_KEY` in your environment. Configure Inngest Cloud webhook to `https://yourdomain.com/api/inngest`. Deploy and test sending an event from the Inngest dashboard.
+
 ```
 
 ### Manual Job Triggers
@@ -287,13 +306,13 @@ import { triggerVideoDiscovery, activateKillSwitch } from '../inngest';
 // Trigger discovery job
 await triggerVideoDiscovery({
   limit: 10,
-  forceRefresh: true
+  forceRefresh: true,
 });
 
 // Activate kill switch
 await activateKillSwitch({
-  reason: "Testing emergency stop",
-  requestedBy: "developer@company.com"
+  reason: 'Testing emergency stop',
+  requestedBy: 'developer@company.com',
 });
 ```
 
@@ -306,14 +325,14 @@ import { inngest } from '../inngest';
 
 // Test discovery job
 await inngest.send({
-  name: "tiktok/video.discovery.manual",
-  data: { limit: 5, forceRefresh: true }
+  name: 'tiktok/video.discovery.manual',
+  data: { limit: 5, forceRefresh: true },
 });
 
 // Test health check
 await inngest.send({
-  name: "tiktok/system.health_check",
-  data: {}
+  name: 'tiktok/system.health_check',
+  data: {},
 });
 ```
 
@@ -377,6 +396,7 @@ curl http://localhost:3032/api/admin/jobs | jq '.data.recentLogs'
 **If jobs are causing system issues:**
 
 1. Activate kill switch immediately:
+
 ```bash
 curl -X POST http://localhost:3032/api/admin/kill-switch \
   -H "Content-Type: application/json" \
@@ -399,7 +419,7 @@ Regular maintenance cleanup helps control costs by removing old data.
 ## Future Enhancements
 
 - **Advanced Retry Policies**: Exponential backoff with jitter
-- **Job Priorities**: Critical vs. normal job queues  
+- **Job Priorities**: Critical vs. normal job queues
 - **Batch Processing**: Multiple videos per job
 - **Real-time Dashboard**: WebSocket-based monitoring
 - **Slack Integration**: Alert notifications
