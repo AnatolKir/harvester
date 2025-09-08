@@ -11,6 +11,7 @@ import {
   Database,
   ShieldAlert,
   Activity,
+  AlertTriangle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -24,6 +25,7 @@ const navigation = [
   { name: "Admin", href: "/admin", icon: Settings },
   { name: "Jobs", href: "/admin/jobs", icon: Activity },
   { name: "Kill Switch", href: "/admin/kill-switch", icon: ShieldAlert },
+  { name: "DLQ", href: "/admin/dead-letter-queue", icon: AlertTriangle },
 ];
 
 interface SidebarProps {

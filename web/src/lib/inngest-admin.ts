@@ -239,7 +239,7 @@ export class InngestAdmin {
   /**
    * Update system configuration
    */
-  static async updateConfig(key: string, value: any, description?: string) {
+  static async updateConfig(key: string, value: unknown, description?: string) {
     try {
       const { error } = await supabase.from("system_config").upsert(
         {
@@ -287,9 +287,9 @@ export class InngestAdmin {
   static async retryDeadLetterJob(dlqId: string) {
     try {
       // Get the DLQ item
-      const { data: dlqItem, error: fetchError } = await supabase
+      const { error: fetchError } = await supabase
         .from("dead_letter_queue")
-        .select("*")
+        .select("id")
         .eq("id", dlqId)
         .single();
 
@@ -313,6 +313,25 @@ export class InngestAdmin {
       return { success: true, message: "Job retry scheduled" };
     } catch (error) {
       console.error("Failed to retry dead letter job:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Permanently delete a dead letter queue item
+   */
+  static async deleteDeadLetterItem(dlqId: string) {
+    try {
+      const { error } = await supabase
+        .from("dead_letter_queue")
+        .delete()
+        .eq("id", dlqId);
+
+      if (error) throw error;
+
+      return { success: true, message: "DLQ item deleted" };
+    } catch (error) {
+      console.error("Failed to delete DLQ item:", error);
       throw error;
     }
   }

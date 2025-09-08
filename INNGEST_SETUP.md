@@ -241,15 +241,30 @@ POST /api/admin/config
 ### Dead Letter Queue
 
 ```bash
-# Get failed jobs
+# Get failed jobs (optional: status=pending|retry_scheduled)
 GET /api/admin/dead-letter-queue?status=pending
 
 # Retry a failed job
-POST /api/admin/dead-letter-queue/retry
+POST /api/admin/dead-letter-queue
 {
-  "dlqId": "uuid-of-failed-job"
+  "dlqId": "uuid-of-failed-job",
+  "requestedBy": "admin@company.com"
+}
+
+# Delete a failed job from DLQ
+DELETE /api/admin/dead-letter-queue
+{
+  "dlqId": "uuid-of-failed-job",
+  "requestedBy": "admin@company.com"
 }
 ```
+
+#### Admin UI (Dead Letter Queue)
+
+- Web UI path: `/admin/dead-letter-queue`
+- Admin-only (RBAC via middleware)
+- Columns: id, job type, error, first/last failure, attempts, payload summary
+- Actions: Retry and Delete with confirmations; actions are logged to `system_logs`.
 
 ## Monitoring & Alerting
 
