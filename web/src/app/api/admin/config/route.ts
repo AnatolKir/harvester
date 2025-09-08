@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { InngestAdmin } from "@/lib/inngest-admin";
+import { alertKillSwitchChanged } from "@/lib/alerts";
 
 // GET /api/admin/config - Get system configuration
 export async function GET(request: NextRequest) {
@@ -23,9 +24,9 @@ export async function GET(request: NextRequest) {
 }
 
 // POST /api/admin/config - Update system configuration
-export async function POST(request: NextRequest) {
+export async function POST(_request: NextRequest) {
   try {
-    const body = await request.json();
+    const body = await _request.json();
     const { key, value, description } = body;
 
     if (!key) {
@@ -37,6 +38,10 @@ export async function POST(request: NextRequest) {
     }
 
     const result = await InngestAdmin.updateConfig(key, value, description);
+    if (key === "kill_switch_active") {
+      const active = Boolean(value);
+      await alertKillSwitchChanged(active);
+    }
 
     return NextResponse.json({
       success: true,

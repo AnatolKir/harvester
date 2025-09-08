@@ -4,6 +4,7 @@ import { createClient } from "@supabase/supabase-js";
 import { MCPClient } from "../../web/src/lib/mcp/client";
 import { acquireCommentsToken } from "../../web/src/lib/rate-limit/buckets";
 import { fetchCommentsForVideo } from "../../web/src/lib/mcp/comments";
+import { alertJobError } from "../../web/src/lib/alerts";
 
 const supabase = createClient(
   process.env.SUPABASE_URL!,
@@ -238,6 +239,12 @@ export const commentHarvestingJob = inngest.createFunction(
         stack: error instanceof Error ? error.stack : undefined,
         videoId,
         attempt
+      });
+
+      const jobId = `harvesting-${videoId}`;
+      await alertJobError(jobId, {
+        error: error instanceof Error ? error.message : String(error),
+        attempt,
       });
 
       await supabase

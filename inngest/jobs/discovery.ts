@@ -4,6 +4,7 @@ import { createClient } from "@supabase/supabase-js";
 import { MCPClient } from "../../web/src/lib/mcp/client";
 import { acquireDiscoveryToken } from "../../web/src/lib/rate-limit/buckets";
 import { fetchPromotedVideoIds } from "../../web/src/lib/mcp/discovery";
+import { alertJobError } from "../../web/src/lib/alerts";
 
 const supabase = createClient(
   process.env.SUPABASE_URL!,
@@ -220,6 +221,12 @@ export const videoDiscoveryJob = inngest.createFunction(
         error: error instanceof Error ? error.message : String(error),
         stack: error instanceof Error ? error.stack : undefined,
         attempt
+      });
+
+      // Fire alert (deduplicated)
+      await alertJobError(jobId, {
+        error: error instanceof Error ? error.message : String(error),
+        attempt,
       });
 
       await supabase
