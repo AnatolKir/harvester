@@ -30,6 +30,7 @@ Authorization: Bearer <jwt_token>
 All API responses follow a consistent format:
 
 ### Success Response
+
 ```json
 {
   "success": true,
@@ -38,6 +39,7 @@ All API responses follow a consistent format:
 ```
 
 ### Error Response
+
 ```json
 {
   "success": false,
@@ -49,6 +51,7 @@ All API responses follow a consistent format:
 ```
 
 ### Paginated Response
+
 ```json
 {
   "success": true,
@@ -65,6 +68,7 @@ All API responses follow a consistent format:
 ```
 
 ### Cursor Paginated Response
+
 ```json
 {
   "success": true,
@@ -80,20 +84,40 @@ All API responses follow a consistent format:
 
 ## Endpoints
 
+## Database Views
+
+These read-optimized views power the UI and API.
+
+- v_domains_overview
+  - Columns: `domain` (text), `total_mentions` (bigint), `first_seen` (timestamptz), `last_seen` (timestamptz)
+  - Purpose: Lightweight domain listing with core stats.
+
+- v_domains_new_today
+  - Columns: `domain` (text), `mentions_today` (bigint)
+  - Purpose: Domains with mentions discovered today.
+
+- v_domain_mentions_recent
+  - Columns: `domain` (text), `comment_id` (uuid), `video_id` (uuid), `created_at` (timestamptz)
+  - Purpose: Flat stream of domain mentions for recent activity feeds. Filter by time in queries.
+
+- v_pipeline_stats
+  - Columns: `domains_day` (bigint), `comments_day` (bigint), `errors_day` (bigint)
+  - Purpose: Daily pipeline counters for dashboards.
+
 ### 1. GET /api/domains
 
 List domains with pagination and filtering options.
 
 #### Query Parameters
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `search` | string | - | Search domains by name (case-insensitive) |
-| `dateFilter` | enum | "all" | Filter by discovery date: "all", "today", "week", "month" |
-| `page` | integer | 1 | Page number (min: 1) |
-| `limit` | integer | 10 | Items per page (min: 1, max: 100) |
-| `sortBy` | enum | "last_seen_at" | Sort field: "domain", "first_seen_at", "last_seen_at", "mention_count", "unique_video_count" |
-| `sortOrder` | enum | "desc" | Sort order: "asc", "desc" |
+| Parameter    | Type    | Default        | Description                                                                                  |
+| ------------ | ------- | -------------- | -------------------------------------------------------------------------------------------- |
+| `search`     | string  | -              | Search domains by name (case-insensitive)                                                    |
+| `dateFilter` | enum    | "all"          | Filter by discovery date: "all", "today", "week", "month"                                    |
+| `page`       | integer | 1              | Page number (min: 1)                                                                         |
+| `limit`      | integer | 10             | Items per page (min: 1, max: 100)                                                            |
+| `sortBy`     | enum    | "last_seen_at" | Sort field: "domain", "first_seen_at", "last_seen_at", "mention_count", "unique_video_count" |
+| `sortOrder`  | enum    | "desc"         | Sort order: "asc", "desc"                                                                    |
 
 #### Example Request
 
@@ -142,8 +166,8 @@ Get detailed information about a specific domain, including recent mentions and 
 #### Path Parameters
 
 | Parameter | Type | Description |
-|-----------|------|-------------|
-| `id` | UUID | Domain ID |
+| --------- | ---- | ----------- |
+| `id`      | UUID | Domain ID   |
 
 #### Example Request
 
@@ -214,13 +238,13 @@ List videos with domain information using cursor-based pagination.
 
 #### Query Parameters
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `cursor` | string | - | Cursor for pagination (base64 encoded timestamp) |
-| `limit` | integer | 10 | Items per page (min: 1, max: 100) |
-| `search` | string | - | Search in title, description, or TikTok ID |
-| `status` | enum | "all" | Filter by scrape status: "all", "pending", "processing", "completed", "failed" |
-| `hasComments` | boolean | - | Filter videos with/without comments |
+| Parameter     | Type    | Default | Description                                                                    |
+| ------------- | ------- | ------- | ------------------------------------------------------------------------------ |
+| `cursor`      | string  | -       | Cursor for pagination (base64 encoded timestamp)                               |
+| `limit`       | integer | 10      | Items per page (min: 1, max: 100)                                              |
+| `search`      | string  | -       | Search in title, description, or TikTok ID                                     |
+| `status`      | enum    | "all"   | Filter by scrape status: "all", "pending", "processing", "completed", "failed" |
+| `hasComments` | boolean | -       | Filter videos with/without comments                                            |
 
 #### Example Request
 
@@ -341,11 +365,11 @@ Webhook endpoint for worker job status updates. This endpoint is used by the Pyt
 
 #### Headers
 
-| Header | Value | Description |
-|--------|-------|-------------|
-| `Authorization` | `Bearer <worker_token>` | Worker authentication token |
-| `Content-Type` | `application/json` | Request content type |
-| `User-Agent` | Worker identification | Used for logging and tracking |
+| Header          | Value                   | Description                   |
+| --------------- | ----------------------- | ----------------------------- |
+| `Authorization` | `Bearer <worker_token>` | Worker authentication token   |
+| `Content-Type`  | `application/json`      | Request content type          |
+| `User-Agent`    | Worker identification   | Used for logging and tracking |
 
 #### Request Body
 
@@ -407,20 +431,21 @@ curl -X POST "http://localhost:3000/api/worker/webhook" \
 
 ### Common HTTP Status Codes
 
-| Status Code | Description |
-|-------------|-------------|
-| 200 | Success |
-| 400 | Bad Request - Invalid parameters |
-| 401 | Unauthorized - Invalid or missing authentication |
-| 403 | Forbidden - Insufficient permissions |
-| 404 | Not Found - Resource doesn't exist |
-| 422 | Unprocessable Entity - Validation errors |
-| 429 | Too Many Requests - Rate limit exceeded |
-| 500 | Internal Server Error |
+| Status Code | Description                                      |
+| ----------- | ------------------------------------------------ |
+| 200         | Success                                          |
+| 400         | Bad Request - Invalid parameters                 |
+| 401         | Unauthorized - Invalid or missing authentication |
+| 403         | Forbidden - Insufficient permissions             |
+| 404         | Not Found - Resource doesn't exist               |
+| 422         | Unprocessable Entity - Validation errors         |
+| 429         | Too Many Requests - Rate limit exceeded          |
+| 500         | Internal Server Error                            |
 
 ### Error Response Examples
 
 #### Validation Error (400)
+
 ```json
 {
   "success": false,
@@ -433,6 +458,7 @@ curl -X POST "http://localhost:3000/api/worker/webhook" \
 ```
 
 #### Not Found Error (404)
+
 ```json
 {
   "success": false,
@@ -441,6 +467,7 @@ curl -X POST "http://localhost:3000/api/worker/webhook" \
 ```
 
 #### Rate Limit Error (429)
+
 ```json
 {
   "success": false,
@@ -449,6 +476,7 @@ curl -X POST "http://localhost:3000/api/worker/webhook" \
 ```
 
 #### Authentication Error (401)
+
 ```json
 {
   "success": false,
@@ -461,23 +489,23 @@ curl -X POST "http://localhost:3000/api/worker/webhook" \
 ### JavaScript/TypeScript Example
 
 ```typescript
-import { HarvesterApiClient } from '@/lib/api';
+import { HarvesterApiClient } from "@/lib/api";
 
 const client = new HarvesterApiClient({
-  baseUrl: 'http://localhost:3000/api',
-  authToken: 'your-jwt-token'
+  baseUrl: "http://localhost:3000/api",
+  authToken: "your-jwt-token",
 });
 
 // List domains
 const domains = await client.domains.list({
-  search: 'example',
-  dateFilter: 'week',
+  search: "example",
+  dateFilter: "week",
   page: 1,
-  limit: 20
+  limit: 20,
 });
 
 // Get domain details
-const domain = await client.domains.get('550e8400-e29b-41d4-a716-446655440000');
+const domain = await client.domains.get("550e8400-e29b-41d4-a716-446655440000");
 
 // Get stats
 const stats = await client.stats.get();
@@ -496,7 +524,7 @@ class HarvesterAPI:
             'Authorization': f'Bearer {auth_token}',
             'Content-Type': 'application/json'
         }
-    
+
     def list_domains(self, **params):
         response = requests.get(
             f'{self.base_url}/domains',
@@ -504,7 +532,7 @@ class HarvesterAPI:
             params=params
         )
         return response.json()
-    
+
     def get_domain(self, domain_id):
         response = requests.get(
             f'{self.base_url}/domains/{domain_id}',
@@ -535,6 +563,7 @@ X-RateLimit-Reset: 1642694400
 ```
 
 When rate limited, the API returns:
+
 - **Status**: 429 Too Many Requests
 - **Retry-After**: Seconds until next request allowed
 
@@ -583,6 +612,7 @@ UPSTASH_REDIS_REST_TOKEN=your-redis-token
 ## API Versioning
 
 Currently, the API is unversioned (v1 implicit). Future versions will be available at:
+
 - `/api/v2/` for version 2
 - `/api/v3/` for version 3
 
