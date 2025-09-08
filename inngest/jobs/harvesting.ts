@@ -1,7 +1,8 @@
 import { inngest } from "../client";
-import { Events, JobResult, CommentHarvestingPayload } from "../types";
+import { JobResult } from "../types";
 import { createClient } from "@supabase/supabase-js";
 import { MCPClient } from "../../web/src/lib/mcp/client";
+import { acquireCommentsToken } from "../../web/src/lib/rate-limit/buckets";
 import { fetchCommentsForVideo } from "../../web/src/lib/mcp/comments";
 
 const supabase = createClient(
@@ -51,7 +52,7 @@ export const commentHarvestingJob = inngest.createFunction(
       }
 
       // Step 2: Verify video exists and needs harvesting
-      const videoInfo = await step.run("verify-video", async () => {
+      const _videoInfo = await step.run("verify-video", async () => {
         const { data: video, error } = await supabase
           .from("video")
           .select("id, video_id, last_scraped_at")
@@ -77,22 +78,50 @@ export const commentHarvestingJob = inngest.createFunction(
         });
       });
 
-      // Step 4: Rate limiting check
+      // Step 4: Rate limiting check (global token bucket for comments)
       await step.run("rate-limit-check", async () => {
-        await new Promise(resolve => setTimeout(resolve, 2000)); // 2 second delay
+        await acquireCommentsToken({ identifier: "global", logger });
       });
 
-      // Step 5: Harvest comments via MCP
+      // Step 5: Harvest comments via MCP with retry/backoff and idempotency in-loop
       const harvestResult = await step.run("harvest-comments", async () => {
         const mcp = new MCPClient({
           baseUrl: process.env.MCP_BASE_URL!,
           apiKey: process.env.BRIGHTDATA_MCP_API_KEY!,
           stickyMinutes: parseInt(process.env.MCP_STICKY_SESSION_MINUTES || "10"),
         });
-        const comments = await fetchCommentsForVideo(mcp, videoId, { maxPages });
+        // Retry with exponential backoff for transient errors
+        const maxRetries = 5;
+        let attemptNum = 0;
+        let comments: any[] = [];
+        // eslint-disable-next-line no-constant-condition
+        while (true) {
+          try {
+            const res = await fetchCommentsForVideo(mcp, videoId, { maxPages });
+            comments = res;
+            break;
+          } catch (err: any) {
+            const status = err?.status;
+            const bodySnippet = err?.bodySnippet;
+            const isTransient = err?.isTransient === true;
+            logger.warn("mcp_comments_failed", { status, isTransient, body: bodySnippet, attempt: attemptNum + 1, videoId });
+            if (!isTransient || attemptNum >= maxRetries - 1) {
+              throw err;
+            }
+            const base = 500 * Math.pow(2, attemptNum);
+            const jitter = Math.floor(Math.random() * 250);
+            const waitMs = Math.min(10000, base + jitter);
+            logger.info("backoff_wait", { waitMs, attempt: attemptNum + 1, videoId });
+            await new Promise((r) => setTimeout(r, waitMs));
+            attemptNum++;
+          }
+        }
 
-        let inserted = 0;
+        let _inserted = 0;
+        const seen = new Set<string>();
         for (const c of comments) {
+          if (!c.comment_id || seen.has(c.comment_id)) continue;
+          seen.add(c.comment_id);
           const { error } = await supabase
             .from("comment")
             .upsert(
@@ -106,7 +135,7 @@ export const commentHarvestingJob = inngest.createFunction(
               },
               { onConflict: "id" }
             );
-          if (!error) inserted++;
+          if (!error) _inserted++;
         }
 
         return { commentsHarvested: comments.length, pagesProcessed: maxPages, domainsExtracted: 0, newComments: comments };
@@ -284,7 +313,7 @@ export const domainExtractionJob = inngest.createFunction(
         for (const domainInfo of domains) {
           try {
             // Check if domain exists, create if not
-            const { data: existingDomain, error: selectError } = await supabase
+            const { data: existingDomain, error: _selectError } = await supabase
               .from("domain")
               .select("id")
               .eq("domain", domainInfo.domainName)
@@ -320,13 +349,15 @@ export const domainExtractionJob = inngest.createFunction(
             // Create domain mention
             const { error: mentionError } = await supabase
               .from("domain_mention")
-              .insert({
-                domain: domainInfo.domainName,
-                comment_id: commentId,
-                video_id: videoId,
-                created_at: new Date().toISOString()
-              })
-              .onConflict('domain,video_id,comment_id');
+              .upsert(
+                {
+                  domain: domainInfo.domainName,
+                  comment_id: commentId,
+                  video_id: videoId,
+                  created_at: new Date().toISOString()
+                },
+                { onConflict: 'domain,video_id,comment_id' }
+              );
 
             if (mentionError) {
               logger.error("Failed to create domain mention", {

@@ -8,10 +8,11 @@ export async function fetchCommentsForVideo(
   let sessionId: string | undefined;
   const out: any[] = [];
   for (let page = 1; page <= maxPages; page++) {
+    const idempotencyKey = `comments:${videoId}:${page}`;
     const resp = await client.call(
       'tiktok.comments.page',
       { videoId, page },
-      { sticky: true, sessionId }
+      { sticky: true, sessionId, idempotencyKey }
     );
     sessionId = resp.sessionId ?? sessionId;
     const items = (resp.items ?? [])

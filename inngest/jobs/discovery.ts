@@ -1,7 +1,8 @@
 import { inngest } from "../client";
-import { Events, JobResult, VideoDiscoveryPayload } from "../types";
+import { JobResult } from "../types";
 import { createClient } from "@supabase/supabase-js";
 import { MCPClient } from "../../web/src/lib/mcp/client";
+import { acquireDiscoveryToken } from "../../web/src/lib/rate-limit/buckets";
 import { fetchPromotedVideoIds } from "../../web/src/lib/mcp/discovery";
 
 const supabase = createClient(
@@ -65,18 +66,49 @@ export const videoDiscoveryJob = inngest.createFunction(
         });
       });
 
-      // Step 3: Discover promoted videos via MCP
+      // Step 3: Discover promoted videos via MCP (respect global rate limit)
       const discoveryResult = await step.run("discover-videos", async () => {
+        await acquireDiscoveryToken({ identifier: "global", logger });
         const mcp = new MCPClient({
           baseUrl: process.env.MCP_BASE_URL!,
           apiKey: process.env.BRIGHTDATA_MCP_API_KEY!,
           stickyMinutes: parseInt(process.env.MCP_STICKY_SESSION_MINUTES || "10"),
         });
-        const items = await fetchPromotedVideoIds(mcp, { region: "US", windowHours: 6, pageSize: limit });
 
-        // Insert videos
+        // Retry with exponential backoff (jitter) for transient MCP errors
+        const maxRetries = 5;
+        let attemptNum = 0;
+        let items: Array<{ video_id: string; url: string } > = [];
+        // eslint-disable-next-line no-constant-condition
+        while (true) {
+          try {
+            const res = await fetchPromotedVideoIds(mcp, { region: "US", windowHours: 6, pageSize: limit });
+            items = res;
+            break;
+          } catch (err: any) {
+            const status = err?.status;
+            const bodySnippet = err?.bodySnippet;
+            const isTransient = err?.isTransient === true;
+            logger.warn("mcp_discovery_failed", { status, isTransient, body: bodySnippet, attempt: attemptNum + 1 });
+            if (!isTransient || attemptNum >= maxRetries - 1) {
+              // Fail fast on 4xx or when retries exhausted
+              throw err;
+            }
+            const base = 500 * Math.pow(2, attemptNum); // 0.5s,1s,2s,4s,8s
+            const jitter = Math.floor(Math.random() * 250);
+            const waitMs = Math.min(10000, base + jitter);
+            logger.info("backoff_wait", { waitMs, attempt: attemptNum + 1 });
+            await new Promise((r) => setTimeout(r, waitMs));
+            attemptNum++;
+          }
+        }
+
+        // Insert videos with idempotency in-loop
+        const seen = new Set<string>();
         let newVideos = 0;
         for (const v of items) {
+          if (!v.video_id || seen.has(v.video_id)) continue;
+          seen.add(v.video_id);
           const { error } = await supabase
             .from("video")
             .upsert(
@@ -95,8 +127,8 @@ export const videoDiscoveryJob = inngest.createFunction(
           newVideos,
         });
 
-        return { videosFound: items.length, newVideos, videoIds: items.map((i) => i.video_id) };
-      });
+        return { videosFound: items.length, newVideos, videoIds: items.map((i: { video_id: string }) => i.video_id) };
+      }) as unknown as { videosFound: number; newVideos: number; videoIds: string[] };
 
       // Step 4: Trigger harvesting for new videos
       if (discoveryResult.newVideos > 0) {
