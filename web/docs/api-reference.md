@@ -630,3 +630,57 @@ Currently, the API is unversioned (v1 implicit). Future versions will be availab
 - `/api/v3/` for version 3
 
 Version 1 will be maintained for backward compatibility.
+
+### 6. GET /api/domains/export (CSV)
+
+Export domains as CSV, streaming large datasets efficiently.
+
+#### Query Parameters
+
+| Parameter    | Type | Default | Description                             |
+| ------------ | ---- | ------- | --------------------------------------- |
+| `dateFilter` | enum | "all"   | Filter: "all", "today", "week", "month" |
+
+#### Example Request
+
+```bash
+curl -X GET "http://localhost:3000/api/domains/export?dateFilter=week" \
+  -H "Authorization: Bearer <jwt_token>" \
+  -H "Accept: text/csv" \
+  -o domains.csv
+```
+
+#### Response
+
+Content-Type: `text/csv` with columns:
+
+```
+domain,total_mentions,first_seen,last_seen
+```
+
+### 7. GET /api/domains/[id]/mentions/export (CSV)
+
+Export mentions for a domain as CSV.
+
+#### Query Parameters
+
+| Parameter | Type   | Default | Description                             |
+| --------- | ------ | ------- | --------------------------------------- |
+| `since`   | string | -       | ISO datetime threshold for `created_at` |
+
+#### Example Request
+
+```bash
+curl -X GET "http://localhost:3000/api/domains/550e8400-e29b-41d4-a716-446655440000/mentions/export?since=2024-01-01T00:00:00Z" \
+  -H "Authorization: Bearer <jwt_token>" \
+  -H "Accept: text/csv" \
+  -o domain_mentions.csv
+```
+
+#### Response
+
+Content-Type: `text/csv` with columns:
+
+```
+domain,comment_id,video_id,created_at
+```
