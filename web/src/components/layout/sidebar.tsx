@@ -13,6 +13,7 @@ import {
   Activity,
   AlertTriangle,
   ScrollText,
+  FileDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -28,6 +29,7 @@ const navigation = [
   { name: "Logs", href: "/admin/logs", icon: ScrollText },
   { name: "Kill Switch", href: "/admin/kill-switch", icon: ShieldAlert },
   { name: "DLQ", href: "/admin/dead-letter-queue", icon: AlertTriangle },
+  { name: "Exports", href: "/admin/exports", icon: FileDown },
 ];
 
 interface SidebarProps {
