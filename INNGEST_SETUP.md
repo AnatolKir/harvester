@@ -474,3 +474,36 @@ Regular maintenance cleanup helps control costs by removing old data.
 - **Slack Integration**: Alert notifications
 - **Job Scheduling**: Custom cron expressions
 - **Performance Metrics**: Detailed execution analytics
+
+## Backfill Job
+
+The discovery backfill job fetches promoted TikTok videos across historical day windows with strict global rate limits and idempotent upserts.
+
+- Event: `tiktok/video.discovery.backfill`
+- Params: `days` (number, required), `limit` (number, optional; default 100)
+- Checkpointing: progress stored in `system_config` under `discovery_backfill_checkpoint`
+
+### Trigger via Admin API
+
+```bash
+POST /api/admin/jobs
+{
+  "action": "trigger_backfill",
+  "days": 7,
+  "limit": 100
+}
+```
+
+### Trigger via helper
+
+```ts
+import { triggerDiscoveryBackfill } from '../inngest';
+
+await triggerDiscoveryBackfill({ days: 7, limit: 100 });
+```
+
+### Notes
+
+- Respects `DISCOVERY_RPM` using the shared token bucket
+- Safe to retry; upserts on `video(video_id)` ensure idempotency
+- On restart, resumes from the last saved checkpoint

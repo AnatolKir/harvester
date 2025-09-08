@@ -21,6 +21,11 @@ const envSchema = z.object({
   INNGEST_SIGNING_KEY: z.string().optional(),
   INNGEST_APP_ID: z.string().default('tiktok-harvester'),
 
+  // Alerts / Slack
+  SLACK_WEBHOOK_URL: z.string().url().optional(),
+  SLACK_ALERTS_ENABLED: z.coerce.boolean().default(false),
+  ALERTS_DRY_RUN: z.coerce.boolean().default(false).optional(),
+
   // MCP / Bright Data
   BRIGHTDATA_MCP_API_KEY: z.string().min(1),
   MCP_BASE_URL: z.string().url(),
@@ -57,6 +62,10 @@ function validateEnv(): Env {
     INNGEST_EVENT_KEY: process.env.INNGEST_EVENT_KEY,
     INNGEST_SIGNING_KEY: process.env.INNGEST_SIGNING_KEY,
     INNGEST_APP_ID: process.env.INNGEST_APP_ID,
+
+    SLACK_WEBHOOK_URL: process.env.SLACK_WEBHOOK_URL,
+    SLACK_ALERTS_ENABLED: process.env.SLACK_ALERTS_ENABLED,
+    ALERTS_DRY_RUN: process.env.ALERTS_DRY_RUN,
 
     BRIGHTDATA_MCP_API_KEY: process.env.BRIGHTDATA_MCP_API_KEY || process.env.API_TOKEN,
     MCP_BASE_URL: process.env.MCP_BASE_URL || process.env.MCP_GATEWAY_URL || (process.env.NODE_ENV !== 'production' ? 'http://localhost:3333' : undefined as any),
@@ -98,6 +107,11 @@ export function getServerEnv() {
     INNGEST_EVENT_KEY: env.INNGEST_EVENT_KEY,
     INNGEST_SIGNING_KEY: env.INNGEST_SIGNING_KEY,
     INNGEST_APP_ID: env.INNGEST_APP_ID,
+
+    // Alerts / Slack
+    SLACK_WEBHOOK_URL: env.SLACK_WEBHOOK_URL,
+    SLACK_ALERTS_ENABLED: env.SLACK_ALERTS_ENABLED,
+    ALERTS_DRY_RUN: env.ALERTS_DRY_RUN,
 
     BRIGHTDATA_MCP_API_KEY: env.BRIGHTDATA_MCP_API_KEY,
     MCP_BASE_URL: env.MCP_BASE_URL,

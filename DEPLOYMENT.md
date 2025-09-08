@@ -59,6 +59,11 @@ INNGEST_SERVE_HOST=https://yourdomain.com
 # Worker - Background Processing (Optional)
 WORKER_WEBHOOK_URL=https://your-worker.railway.app
 WORKER_API_KEY=your_worker_api_key
+
+# Slack Alerting (Optional)
+SLACK_ALERTS_ENABLED=true
+SLACK_WEBHOOK_URL=https://hooks.slack.com/services/xxx/yyy/zzzz
+ALERTS_DRY_RUN=false
 ```
 
 ### Environment Validation
@@ -122,6 +127,7 @@ make deploy-all
 Configure the following secrets in your GitHub repository:
 
 **Vercel Secrets:**
+
 ```
 VERCEL_TOKEN=your_vercel_token
 VERCEL_ORG_ID=your_org_id
@@ -130,6 +136,7 @@ VERCEL_PROJECT_ID_STAGING=your_staging_project_id
 ```
 
 **Environment Secrets (for each environment):**
+
 ```
 # Production
 NEXT_PUBLIC_SUPABASE_URL_PROD=https://prod.supabase.co
@@ -149,6 +156,7 @@ NEXTAUTH_SECRET_STAGING=staging_32_char_secret
 ```
 
 **Worker Platform Secrets:**
+
 ```
 # For Railway deployment
 RAILWAY_TOKEN=your_railway_token
@@ -161,15 +169,18 @@ FLY_API_TOKEN=your_fly_token
 #### Automated Workflows
 
 **Continuous Integration:**
+
 - Pushes and PRs trigger CI pipeline
 - Runs tests, linting, and security scans
 - Validates environment configuration
 
 **Staging Deployment:**
+
 - Pushes to `develop` branch auto-deploy to staging
 - Manual trigger available for any branch
 
 **Production Deployment:**
+
 - Manual workflow dispatch from `main` branch
 - Requires confirmation checkbox
 - Supports selective deployment (web only, worker only)
@@ -191,6 +202,7 @@ git push origin develop
 ### Vercel Configuration
 
 1. **Connect Repository:**
+
    ```bash
    cd web
    vercel --confirm
@@ -208,6 +220,7 @@ git push origin develop
 ### Railway Setup
 
 1. **Initialize Project:**
+
    ```bash
    cd worker
    railway login
@@ -215,6 +228,7 @@ git push origin develop
    ```
 
 2. **Configure Variables:**
+
    ```bash
    railway variables set SUPABASE_URL=your_url
    railway variables set SUPABASE_SERVICE_ROLE_KEY=your_key
@@ -229,12 +243,14 @@ git push origin develop
 ### Fly.io Setup
 
 1. **Initialize App:**
+
    ```bash
    cd worker
    fly launch --no-deploy --generate-name
    ```
 
 2. **Set Secrets:**
+
    ```bash
    fly secrets set SUPABASE_URL=your_url
    fly secrets set SUPABASE_SERVICE_ROLE_KEY=your_key
@@ -254,6 +270,7 @@ git push origin develop
    - Note down URL and keys
 
 2. **Apply Migrations:**
+
    ```bash
    make db-push
    ```
@@ -284,18 +301,22 @@ curl https://your-worker.railway.app/health
 ### Monitoring Setup
 
 **Vercel:**
+
 - Built-in analytics and performance monitoring
 - Error tracking in dashboard
 
 **Railway:**
+
 - Built-in metrics and logging
 - Custom health checks supported
 
 **Fly.io:**
+
 - Built-in health checks (configured in fly.toml)
 - Metrics available in dashboard
 
 **Supabase:**
+
 - Database metrics in dashboard
 - Query performance insights
 
@@ -316,11 +337,13 @@ vercel rollback [deployment-url]
 ### Worker Rollback
 
 **Railway:**
+
 ```bash
 railway rollback
 ```
 
 **Fly.io:**
+
 ```bash
 fly releases  # List releases
 fly releases rollback [version]
@@ -341,21 +364,25 @@ psql $DATABASE_URL < backup.sql
 ## Security Considerations
 
 ### Environment Variables
+
 - Never commit secrets to git
 - Use different secrets for staging/production
 - Rotate secrets regularly
 
 ### Access Control
+
 - Use least-privilege principles
 - Regular audit of service access
 - Enable 2FA where available
 
 ### Network Security
+
 - HTTPS only in production
 - Proper CORS configuration
 - Rate limiting enabled
 
 ### Database Security
+
 - Row Level Security (RLS) enabled
 - Regular security updates
 - Monitor for suspicious activity
@@ -363,23 +390,27 @@ psql $DATABASE_URL < backup.sql
 ## Performance Optimization
 
 ### Web Application
+
 - Next.js automatic optimizations
 - Image optimization enabled
 - Static generation where possible
 - CDN via Vercel Edge Network
 
 ### Worker
+
 - Resource limits configured
 - Auto-scaling enabled
 - Health check timeouts set
 - Playwright browser optimization
 
 ### Database
+
 - Connection pooling via Supabase
 - Proper indexing on queries
 - Regular VACUUM and ANALYZE
 
 ### Redis
+
 - Connection pooling
 - Proper expiration policies
 - Memory usage monitoring
@@ -387,30 +418,36 @@ psql $DATABASE_URL < backup.sql
 ## Cost Estimation
 
 ### Vercel
+
 - **Hobby**: $0/month (personal projects)
 - **Pro**: $20/month (team projects)
 - **Enterprise**: Custom pricing
 
 ### Railway
+
 - **Starter**: $5/month (basic apps)
 - **Developer**: $10/month (production apps)
 - **Team**: $20/month (team collaboration)
 
 ### Fly.io
+
 - **Shared CPU**: ~$5-15/month
 - **Dedicated CPU**: ~$30-60/month
 - Based on usage and resource allocation
 
 ### Supabase
+
 - **Free Tier**: $0/month (up to 500MB, 2 projects)
 - **Pro**: $25/month (8GB, unlimited projects)
 - **Team**: $599/month (team features)
 
 ### Upstash
+
 - **Free Tier**: $0/month (10K requests/day)
 - **Pay as you scale**: ~$0.20/100K requests
 
 **Total Estimated Monthly Cost:**
+
 - **Development**: $0-10/month
 - **Small Production**: $50-100/month
 - **Medium Production**: $150-300/month
@@ -420,6 +457,7 @@ psql $DATABASE_URL < backup.sql
 ### Common Issues
 
 **Build Failures:**
+
 ```bash
 # Clear cache and rebuild
 make clean
@@ -428,6 +466,7 @@ make deploy-web
 ```
 
 **Environment Variable Issues:**
+
 ```bash
 # Validate environment
 make validate-env-vars
@@ -437,6 +476,7 @@ echo $NEXT_PUBLIC_SUPABASE_URL
 ```
 
 **Database Connection Issues:**
+
 ```bash
 # Test database connection
 make db-push
@@ -446,6 +486,7 @@ make db-push
 ```
 
 **Worker Deployment Issues:**
+
 ```bash
 # Test Docker build locally
 make deploy-worker-docker
@@ -468,17 +509,20 @@ fly logs      # for Fly.io
 ### Regular Tasks
 
 **Weekly:**
+
 - Check application health and performance
 - Review error logs and metrics
 - Verify backup processes
 
 **Monthly:**
+
 - Update dependencies
 - Review and rotate secrets
 - Check cost optimization opportunities
 - Security audit
 
 **Quarterly:**
+
 - Platform updates and migrations
 - Performance optimization review
 - Disaster recovery testing

@@ -81,6 +81,16 @@ export const POST = withSecurity(
           result = await InngestAdmin.runMaintenance(params.daysToKeep || 90);
           break;
 
+        case "trigger_backfill":
+          if (!params.days) {
+            throw new Error("days is required for backfill");
+          }
+          result = await InngestAdmin.triggerBackfill(
+            parseInt(params.days as string, 10),
+            params.limit ? parseInt(params.limit as string, 10) : 100
+          );
+          break;
+
         default:
           throw new Error(`Unknown action: ${action}`);
       }

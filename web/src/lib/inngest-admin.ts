@@ -6,6 +6,7 @@ import {
   deactivateKillSwitch,
   triggerHealthCheck,
   triggerMaintenanceCleanup,
+  triggerDiscoveryBackfill,
 } from "../../../inngest";
 
 const supabase = createClient(
@@ -204,6 +205,19 @@ export class InngestAdmin {
       return { success: true, message: "Harvesting job triggered" };
     } catch (error) {
       console.error("Failed to trigger harvesting:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Manually trigger discovery backfill
+   */
+  static async triggerBackfill(days: number, limit: number = 100) {
+    try {
+      await triggerDiscoveryBackfill({ days, limit });
+      return { success: true, message: "Backfill job triggered" };
+    } catch (error) {
+      console.error("Failed to trigger backfill:", error);
       throw error;
     }
   }

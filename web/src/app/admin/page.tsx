@@ -2,6 +2,17 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { createClient } from "@/lib/supabase/server";
 
+type SystemHealthSnapshot = Record<string, unknown>;
+type JobMetric = Record<string, unknown>;
+type ActiveJob = { job_type: string; status: string; job_count: number };
+type SystemLog = {
+  id: string;
+  level: string;
+  event_type: string;
+  message: string;
+  created_at: string;
+};
+
 async function getAdminSnapshot() {
   const res = await fetch(
     `${process.env.NEXT_PUBLIC_BASE_URL || ""}/api/admin/jobs`,
@@ -14,14 +25,14 @@ async function getAdminSnapshot() {
   }
   const json = await res.json();
   return json.data as {
-    systemHealth: any;
-    jobMetrics: any[];
-    activeJobs: any[];
-    recentLogs: any[];
+    systemHealth: SystemHealthSnapshot;
+    jobMetrics: JobMetric[];
+    activeJobs: ActiveJob[];
+    recentLogs: SystemLog[];
   };
 }
 
-async function trigger(action: string, body: Record<string, any> = {}) {
+async function trigger(action: string, body: Record<string, unknown> = {}) {
   await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || ""}/api/admin/jobs`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -99,6 +110,44 @@ export default async function AdminPage() {
                 Maintenance
               </Button>
             </form>
+            <form
+              action={async () => {
+                "use server";
+                await trigger("trigger_backfill", { days: 7, limit: 100 });
+              }}
+            >
+              <Button type="submit" variant="secondary" size="sm">
+                Backfill (7 days)
+              </Button>
+            </form>
+            {/* CSV Exports */}
+            <a
+              href={`${process.env.NEXT_PUBLIC_BASE_URL || ""}/api/domains/export?dateFilter=all`}
+              target="_blank"
+              rel="noreferrer"
+            >
+              <Button asChild size="sm" variant="outline">
+                <span>Export Domains CSV (All)</span>
+              </Button>
+            </a>
+            <a
+              href={`${process.env.NEXT_PUBLIC_BASE_URL || ""}/api/domains/export?dateFilter=week`}
+              target="_blank"
+              rel="noreferrer"
+            >
+              <Button asChild size="sm" variant="outline">
+                <span>Export Domains CSV (Week)</span>
+              </Button>
+            </a>
+            <a
+              href={`${process.env.NEXT_PUBLIC_BASE_URL || ""}/api/domains/export?dateFilter=today`}
+              target="_blank"
+              rel="noreferrer"
+            >
+              <Button asChild size="sm" variant="outline">
+                <span>Export Domains CSV (Today)</span>
+              </Button>
+            </a>
           </CardContent>
         </Card>
 
@@ -109,7 +158,7 @@ export default async function AdminPage() {
           <CardContent className="text-sm">
             {(snapshot.activeJobs || [])
               .slice(0, 5)
-              .map((j: any, i: number) => (
+              .map((j: ActiveJob, i: number) => (
                 <div
                   key={i}
                   className="flex items-center justify-between border-b py-1 last:border-0"
@@ -132,7 +181,7 @@ export default async function AdminPage() {
           <CardTitle>Recent Logs</CardTitle>
         </CardHeader>
         <CardContent className="space-y-1 text-sm">
-          {(snapshot.recentLogs || []).slice(0, 20).map((l: any) => (
+          {(snapshot.recentLogs || []).slice(0, 20).map((l: SystemLog) => (
             <div
               key={l.id}
               className="flex items-center justify-between border-b py-1 last:border-0"

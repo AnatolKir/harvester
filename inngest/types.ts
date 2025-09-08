@@ -6,6 +6,11 @@ export interface VideoDiscoveryPayload {
   limit?: number;
 }
 
+export interface DiscoveryBackfillPayload {
+  days: number;
+  limit?: number;
+}
+
 export interface CommentHarvestingPayload {
   videoId: string;
   maxPages?: number;
@@ -39,34 +44,37 @@ export interface RetryPayload {
 
 // Event types for Inngest
 export type Events = {
-  "tiktok/video.discovery.scheduled": {
+  'tiktok/video.discovery.scheduled': {
     data: VideoDiscoveryPayload;
   };
-  "tiktok/video.discovery.manual": {
+  'tiktok/video.discovery.manual': {
     data: VideoDiscoveryPayload;
   };
-  "tiktok/comment.harvest": {
+  'tiktok/video.discovery.backfill': {
+    data: DiscoveryBackfillPayload;
+  };
+  'tiktok/comment.harvest': {
     data: CommentHarvestingPayload;
   };
-  "tiktok/domain.extract": {
+  'tiktok/domain.extract': {
     data: DomainExtractionPayload;
   };
-  "tiktok/job.status.update": {
+  'tiktok/job.status.update': {
     data: JobStatusPayload;
   };
-  "tiktok/system.kill_switch": {
+  'tiktok/system.kill_switch': {
     data: KillSwitchPayload;
   };
-  "tiktok/system.deactivate_kill_switch": {
+  'tiktok/system.deactivate_kill_switch': {
     data: KillSwitchPayload;
   };
-  "tiktok/system.retry": {
+  'tiktok/system.retry': {
     data: RetryPayload;
   };
-  "tiktok/system.health_check": {
+  'tiktok/system.health_check': {
     data: {};
   };
-  "tiktok/maintenance.cleanup": {
+  'tiktok/maintenance.cleanup': {
     data: {
       daysToKeep?: number;
     };

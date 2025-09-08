@@ -7,6 +7,7 @@ This project uses environment variables for configuration. All sensitive keys an
 ## Quick Start
 
 1. Copy `.env.example` to `.env.local`:
+
    ```bash
    cp .env.example .env.local
    ```
@@ -70,6 +71,22 @@ This project uses environment variables for configuration. All sensitive keys an
 - **INNGEST_SIGNING_KEY**: Signing key for webhook validation
 - **INNGEST_APP_ID**: Application ID (defaults to 'tiktok-harvester')
 
+### Slack Alerting (Optional)
+
+- **SLACK_ALERTS_ENABLED**: Enable Slack alerts when set to `true`
+  - Example: `true`
+- **SLACK_WEBHOOK_URL**: Incoming webhook URL for your Slack channel
+  - Example: `https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX`
+- **ALERTS_DRY_RUN**: If `true`, logs alert payloads without sending
+  - Example: `false`
+
+When enabled, the system will post alerts for:
+
+- Kill switch activated/deactivated
+- Gaps in discovery/harvesting pipelines
+- Low job success rate (< 70%)
+- Dead letter queue backlog (≥ 10)
+
 ### MCP (Bright Data) Configuration
 
 - **BRIGHTDATA_MCP_API_KEY**: API key for MCP server authentication
@@ -95,16 +112,19 @@ These are retained for backward compatibility but no longer used in the MCP-base
 The application supports three environments:
 
 ### Development
+
 - Higher rate limits for testing
 - Debug mode enabled
 - Shorter cache TTLs
 
 ### Staging
+
 - Moderate rate limits
 - Debug mode enabled
 - Medium cache TTLs
 
 ### Production
+
 - Conservative rate limits
 - Debug mode disabled
 - Longer cache TTLs
@@ -126,6 +146,7 @@ npm run env:validate
 ```
 
 This will check:
+
 - All required variables are present
 - Variables match expected formats
 - No obvious security issues
@@ -135,7 +156,7 @@ This will check:
 Environment variables are typed and validated using Zod. Access them safely through:
 
 ```typescript
-import { env, getPublicEnv, getServerEnv } from '@/lib/env';
+import { env, getPublicEnv, getServerEnv } from "@/lib/env";
 
 // Client-side safe variables
 const { NEXT_PUBLIC_SUPABASE_URL } = getPublicEnv();
@@ -147,16 +168,19 @@ const { SUPABASE_SERVICE_ROLE_KEY } = getServerEnv();
 ## Troubleshooting
 
 ### Missing Environment Variables
+
 - Ensure `.env.local` exists and contains all required variables
 - Check for typos in variable names
 - Verify no extra spaces or quotes in values
 
 ### Invalid Format Errors
+
 - Supabase URLs must match pattern: `https://[project].supabase.co`
 - Upstash URLs must match pattern: `https://[instance].upstash.io`
 - Keys must meet minimum length requirements
 
 ### Build Failures
+
 - The build process validates environment variables
 - Fix any validation errors before building
 - Use `npm run env:validate` to test locally
@@ -164,11 +188,13 @@ const { SUPABASE_SERVICE_ROLE_KEY } = getServerEnv();
 ## Deployment
 
 ### Vercel
+
 1. Go to Project Settings > Environment Variables
 2. Add all variables from `.env.local`
 3. Select appropriate environments (Production/Preview/Development)
 
 ### Railway/Fly.io
+
 1. Use their respective CLI or dashboard
 2. Set environment variables for the worker service
 3. Ensure SUPABASE_URL and SUPABASE_SERVICE_KEY are set
