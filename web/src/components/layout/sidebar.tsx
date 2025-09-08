@@ -9,6 +9,7 @@ import {
   BarChart3,
   Settings,
   Database,
+  ShieldAlert,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -19,6 +20,8 @@ const navigation = [
   { name: "Analytics", href: "/analytics", icon: BarChart3 },
   { name: "Data", href: "/data", icon: Database },
   { name: "Settings", href: "/settings", icon: Settings },
+  { name: "Admin", href: "/admin", icon: Settings },
+  { name: "Kill Switch", href: "/admin/kill-switch", icon: ShieldAlert },
 ];
 
 interface SidebarProps {

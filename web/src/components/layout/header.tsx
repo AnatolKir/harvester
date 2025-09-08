@@ -30,6 +30,18 @@ export function Header() {
               Videos
             </Link>
             <Link
+              href="/admin"
+              className="hover:text-foreground/80 transition-colors"
+            >
+              Admin
+            </Link>
+            <Link
+              href="/admin/kill-switch"
+              className="hover:text-foreground/80 transition-colors"
+            >
+              Kill Switch
+            </Link>
+            <Link
               href="/stats"
               className="hover:text-foreground/80 transition-colors"
             >

@@ -1,5 +1,4 @@
 import { revalidatePath } from "next/cache";
-import { notFound } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -15,43 +14,29 @@ import {
 } from "@/components/ui/dialog";
 import { createClient } from "@/lib/supabase/server";
 
-type KillSwitchStatus = {
-  killSwitchActive: boolean;
-};
+type KillSwitchStatus = { killSwitchActive: boolean };
 
-async function getStatus(): Promise<KillSwitchStatus> {
+async function getStatus(): Promise<{ ok: boolean; data?: KillSwitchStatus }> {
   const res = await fetch(
     `${process.env.NEXT_PUBLIC_BASE_URL || ""}/api/admin/kill-switch`,
     { cache: "no-store" }
   );
   if (!res.ok) {
-    throw new Error(`Failed to fetch kill switch status (${res.status})`);
+    return { ok: false };
   }
   const json = await res.json();
-  return json.data as KillSwitchStatus;
+  return { ok: true, data: json.data as KillSwitchStatus };
 }
 
-async function assertAdminOrNotFound() {
+async function getUserEmail() {
   const supabase = await createClient();
   const { data } = await supabase.auth.getUser();
-  const user = data.user;
-  if (!user) notFound();
-  const adminEmails = (process.env.ADMIN_EMAILS || "")
-    .split(",")
-    .map((s) => s.trim().toLowerCase())
-    .filter(Boolean);
-  const isAdmin =
-    (user.user_metadata &&
-      (user.user_metadata.role === "admin" ||
-        user.user_metadata.is_admin === true)) ||
-    (user.email ? adminEmails.includes(user.email.toLowerCase()) : false);
-  if (!isAdmin) notFound();
-  return user.email || "admin";
+  return data.user?.email || "admin";
 }
 
 export default async function KillSwitchPage() {
-  const requesterEmail = await assertAdminOrNotFound();
-  const status = await getStatus();
+  const requesterEmail = await getUserEmail();
+  const statusResp = await getStatus();
 
   async function activateAction(formData: FormData) {
     "use server";
@@ -90,6 +75,21 @@ export default async function KillSwitchPage() {
 
     revalidatePath("/admin/kill-switch");
   }
+
+  if (!statusResp.ok) {
+    return (
+      <div className="space-y-6 p-6">
+        <h1 className="text-3xl font-bold tracking-tight">
+          Admin · Kill Switch
+        </h1>
+        <p className="text-muted-foreground">
+          You do not have access to view or modify the kill switch.
+        </p>
+      </div>
+    );
+  }
+
+  const status = statusResp.data!;
 
   return (
     <div className="space-y-8">
