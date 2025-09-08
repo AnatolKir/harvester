@@ -6,12 +6,15 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { SecurityUtils } from "./index";
-import { rateLimitMiddleware } from "../rate-limit/middleware";
 import { ZodError, ZodSchema } from "zod";
+
+import { rateLimitMiddleware } from "../rate-limit/middleware";
+
+import { SecurityUtils } from "./index";
 
 export interface SecurityMiddlewareOptions {
   requireAuth?: boolean;
+  requireAdmin?: boolean;
   rateLimitConfig?: {
     authenticated?: boolean;
     identifier?: string;
@@ -20,6 +23,8 @@ export interface SecurityMiddlewareOptions {
   maxPayloadSize?: number; // in bytes
   allowedMethods?: string[];
   corsEnabled?: boolean;
+  allowedOrigins?: string[];
+  requireCsrf?: boolean;
 }
 
 export interface SecurityContext {
@@ -91,7 +96,24 @@ export function withSecurity<T extends any[]>(
         }
       }
 
-      // 4. Payload validation
+      // 4. Origin / CORS checks for non-GET
+      if (request.method !== "GET") {
+        const origin =
+          request.headers.get("origin") || request.headers.get("referer") || "";
+        const allowed = options.allowedOrigins || [
+          process.env.NEXT_PUBLIC_BASE_URL || "",
+        ];
+        if (allowed.filter(Boolean).length > 0) {
+          const ok = allowed.some((o) => origin.startsWith(o));
+          if (!ok) {
+            return createSecurityErrorResponse("Origin not allowed", 403, {
+              requestId,
+            });
+          }
+        }
+      }
+
+      // 5. Payload validation
       if (
         options.validatePayload &&
         (request.method === "POST" ||
@@ -136,46 +158,65 @@ export function withSecurity<T extends any[]>(
         }
       }
 
-      // 5. Authentication check (if required)
+      // 6. Authentication check (if required)
       if (options.requireAuth) {
-        const authHeader = request.headers.get("authorization");
-        const token = SecurityUtils.Auth.extractBearerToken(authHeader);
-
-        if (!token) {
-          return createSecurityErrorResponse("Authentication required", 401, {
-            requestId,
-          });
-        }
-
-        // For webhook endpoints, validate against environment variable
-        if (request.url.includes("/api/worker/webhook")) {
-          const expectedToken = process.env.WORKER_WEBHOOK_TOKEN;
-          if (
-            !expectedToken ||
-            !SecurityUtils.Auth.validateWebhookToken(token, expectedToken)
-          ) {
-            return createSecurityErrorResponse(
-              "Invalid authentication token",
-              401,
-              { requestId }
-            );
+        // Validate via Supabase cookies
+        try {
+          const { createServerClient } = await import("@supabase/ssr");
+          const supabase = createServerClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+            {
+              cookies: {
+                getAll() {
+                  return request.cookies.getAll();
+                },
+                setAll() {},
+              },
+            }
+          );
+          const { data } = await supabase.auth.getUser();
+          const user = data.user;
+          if (!user) {
+            return createSecurityErrorResponse("Authentication required", 401, {
+              requestId,
+            });
           }
           context.isAuthenticated = true;
+
+          if (options.requireAdmin) {
+            const adminEmails = (process.env.ADMIN_EMAILS || "")
+              .split(",")
+              .map((s) => s.trim().toLowerCase())
+              .filter(Boolean);
+            const isAdmin =
+              (user.user_metadata &&
+                (user.user_metadata.role === "admin" ||
+                  user.user_metadata.is_admin === true)) ||
+              (user.email
+                ? adminEmails.includes(user.email.toLowerCase())
+                : false);
+            if (!isAdmin) {
+              return createSecurityErrorResponse("Forbidden", 403, {
+                requestId,
+              });
+            }
+          }
+        } catch (e) {
+          return createSecurityErrorResponse("Auth error", 401, { requestId });
         }
-        // For other endpoints, this would integrate with Supabase auth
-        // The existing middleware.ts handles Supabase auth, so we don't duplicate here
       }
 
-      // 6. Call the actual handler
+      // 7. Call the actual handler
       const response = await handler(request, context, ...args);
 
-      // 7. Add security headers
+      // 8. Add security headers
       SecurityUtils.Headers.addSecurityHeaders(response);
 
-      // 8. Add request ID for tracking
+      // 9. Add request ID for tracking
       response.headers.set("X-Request-ID", requestId);
 
-      // 9. Log successful request
+      // 10. Log successful request
       const duration = Date.now() - startTime;
       console.log(`API Request: ${request.method} ${request.url}`, {
         requestId,
@@ -313,7 +354,9 @@ function createValidationErrorResponse(
   const errors = error.errors.reduce(
     (acc, err) => {
       const path = err.path.join(".");
-      if (!acc[path]) acc[path] = [];
+      if (!acc[path]) {
+        acc[path] = [];
+      }
 
       // Sanitize error message
       const sanitizedMessage = SecurityUtils.Input.sanitizeErrorMessage(

@@ -358,6 +358,7 @@ await inngest.send({
 - **API Authentication**: Secure admin endpoints
 - **Rate Limiting**: Configure appropriate limits
 - **Worker Authentication**: Use secure WORKER_API_KEY
+- **RBAC**: Set `ADMIN_EMAILS` (comma-separated) so only admins can access `/api/admin/*` routes.
 
 ## Troubleshooting
 
