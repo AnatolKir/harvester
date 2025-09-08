@@ -17,10 +17,8 @@ import { createClient } from "@/lib/supabase/server";
 type KillSwitchStatus = { killSwitchActive: boolean };
 
 async function getStatus(): Promise<{ ok: boolean; data?: KillSwitchStatus }> {
-  const res = await fetch(
-    `${process.env.NEXT_PUBLIC_BASE_URL || ""}/api/admin/kill-switch`,
-    { cache: "no-store" }
-  );
+  // Use relative URL so request cookies are forwarded for auth
+  const res = await fetch("/api/admin/kill-switch", { cache: "no-store" });
   if (!res.ok) {
     return { ok: false };
   }
@@ -45,14 +43,14 @@ export default async function KillSwitchPage() {
       throw new Error("Reason is required");
     }
 
-    await fetch(
-      `${process.env.NEXT_PUBLIC_BASE_URL || ""}/api/admin/kill-switch`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ reason, requestedBy: requesterEmail }),
-      }
-    );
+    await fetch(`/api/admin/kill-switch`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Origin: process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3032",
+      },
+      body: JSON.stringify({ reason, requestedBy: requesterEmail }),
+    });
 
     revalidatePath("/admin/kill-switch");
   }
@@ -64,14 +62,14 @@ export default async function KillSwitchPage() {
       throw new Error("Reason is required");
     }
 
-    await fetch(
-      `${process.env.NEXT_PUBLIC_BASE_URL || ""}/api/admin/kill-switch`,
-      {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ reason, requestedBy: requesterEmail }),
-      }
-    );
+    await fetch(`/api/admin/kill-switch`, {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+        Origin: process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3032",
+      },
+      body: JSON.stringify({ reason, requestedBy: requesterEmail }),
+    });
 
     revalidatePath("/admin/kill-switch");
   }
