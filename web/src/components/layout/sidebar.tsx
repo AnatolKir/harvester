@@ -10,6 +10,7 @@ import {
   Settings,
   Database,
   ShieldAlert,
+  Activity,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -21,6 +22,7 @@ const navigation = [
   { name: "Data", href: "/data", icon: Database },
   { name: "Settings", href: "/settings", icon: Settings },
   { name: "Admin", href: "/admin", icon: Settings },
+  { name: "Jobs", href: "/admin/jobs", icon: Activity },
   { name: "Kill Switch", href: "/admin/kill-switch", icon: ShieldAlert },
 ];
 
