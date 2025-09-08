@@ -13,12 +13,22 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { createClient } from "@/lib/supabase/server";
+import { cookies } from "next/headers";
 
 type KillSwitchStatus = { killSwitchActive: boolean };
 
 async function getStatus(): Promise<{ ok: boolean; data?: KillSwitchStatus }> {
-  // Use relative URL so request cookies are forwarded for auth
-  const res = await fetch("/api/admin/kill-switch", { cache: "no-store" });
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3032";
+  const cookieStore = await cookies();
+  const cookieHeader = cookieStore
+    .getAll()
+    .map(({ name, value }) => `${name}=${value}`)
+    .join("; ");
+
+  const res = await fetch(`${baseUrl}/api/admin/kill-switch`, {
+    cache: "no-store",
+    headers: { Cookie: cookieHeader },
+  });
   if (!res.ok) {
     return { ok: false };
   }
@@ -43,11 +53,19 @@ export default async function KillSwitchPage() {
       throw new Error("Reason is required");
     }
 
-    await fetch(`/api/admin/kill-switch`, {
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3032";
+    const cookieStore = await cookies();
+    const cookieHeader = cookieStore
+      .getAll()
+      .map(({ name, value }) => `${name}=${value}`)
+      .join("; ");
+
+    await fetch(`${baseUrl}/api/admin/kill-switch`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Origin: process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3032",
+        Origin: baseUrl,
+        Cookie: cookieHeader,
       },
       body: JSON.stringify({ reason, requestedBy: requesterEmail }),
     });
@@ -62,11 +80,19 @@ export default async function KillSwitchPage() {
       throw new Error("Reason is required");
     }
 
-    await fetch(`/api/admin/kill-switch`, {
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3032";
+    const cookieStore = await cookies();
+    const cookieHeader = cookieStore
+      .getAll()
+      .map(({ name, value }) => `${name}=${value}`)
+      .join("; ");
+
+    await fetch(`${baseUrl}/api/admin/kill-switch`, {
       method: "DELETE",
       headers: {
         "Content-Type": "application/json",
-        Origin: process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3032",
+        Origin: baseUrl,
+        Cookie: cookieHeader,
       },
       body: JSON.stringify({ reason, requestedBy: requesterEmail }),
     });
