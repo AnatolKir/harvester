@@ -223,6 +223,21 @@ An SSR admin page is available at `/admin/kill-switch` to view current status an
 - Charts: jobs/hour per job type; duration averages (p50/p95 pending backend support)
 - Includes recent executions list and links to Health and Kill Switch pages
 
+### Admin UI (System Logs)
+
+- Web UI path: `/admin/logs`
+- Server-rendered page querying `system_logs` with filters:
+  - Level: debug, info, warn, error (chips)
+  - Job Type: filter via `job_status` join on `job_id`
+  - Timeframe: hours back (default 24h)
+  - Correlation ID: matches `metadata.correlationId` or `metadata.correlation_id`
+  - Event Type: optional exact match on `event_type`
+- Features:
+  - Pagination via time-based cursor on `created_at`
+  - Auto-refresh every 30s (respects tab visibility)
+  - Correlation ID copy affordance
+  - Links to related entities when present (e.g., `/domains/{domain_id}`, Jobs by type)
+
 ### System Configuration
 
 ```bash

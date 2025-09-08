@@ -12,6 +12,7 @@ import {
   ShieldAlert,
   Activity,
   AlertTriangle,
+  ScrollText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -24,6 +25,7 @@ const navigation = [
   { name: "Settings", href: "/settings", icon: Settings },
   { name: "Admin", href: "/admin", icon: Settings },
   { name: "Jobs", href: "/admin/jobs", icon: Activity },
+  { name: "Logs", href: "/admin/logs", icon: ScrollText },
   { name: "Kill Switch", href: "/admin/kill-switch", icon: ShieldAlert },
   { name: "DLQ", href: "/admin/dead-letter-queue", icon: AlertTriangle },
 ];
