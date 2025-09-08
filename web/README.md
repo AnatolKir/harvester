@@ -120,6 +120,7 @@ The application uses a custom design system with:
 - **Domains (/domains)**: Comprehensive domain listing with search and filters
 - **Domain Detail (/domains/[id])**: Mentions, related videos, and activity for a specific domain
 - **Videos (/videos)**: Server-rendered list with search, sorting, and cursor pagination
+- **Admin Kill Switch (/admin/kill-switch)**: Toggle global processing on/off with audit logging
 
 ## Development Guidelines
 

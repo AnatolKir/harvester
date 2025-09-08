@@ -205,6 +205,10 @@ DELETE /api/admin/kill-switch
 }
 ```
 
+#### Operator UI
+
+An SSR admin page is available at `/admin/kill-switch` to view current status and toggle the global kill switch. A mandatory reason and the authenticated admin identity are recorded with each action and surfaced in `system_logs`.
+
 ### System Configuration
 
 ```bash
