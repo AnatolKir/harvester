@@ -25,6 +25,7 @@ export const videoDiscoveryJob = inngest.createFunction(
   ],
   async ({ event, step, logger, attempt }) => {
     const { videoId, forceRefresh = false, limit = 50 } = event.data;
+    const jobId = `discovery-${Date.now()}`;
 
     logger.info("Starting video discovery job", {
       videoId,
@@ -54,16 +55,26 @@ export const videoDiscoveryJob = inngest.createFunction(
         };
       }
 
-      // Step 2: Update job status
+      // Step 2: Update job status + log start
       await step.run("update-job-status", async () => {
         await inngest.send({
           name: "tiktok/job.status.update",
           data: {
-            jobId: `discovery-${Date.now()}`,
+            jobId,
             status: "running",
             metadata: { videoId, attempt }
           }
         });
+
+        await supabase
+          .from("system_logs")
+          .insert({
+            event_type: "job_start",
+            level: "info",
+            message: "Video discovery started",
+            job_id: jobId,
+            metadata: { videoId, forceRefresh, limit, attempt }
+          });
       });
 
       // Step 3: Discover promoted videos via MCP (respect global rate limit)
@@ -127,6 +138,16 @@ export const videoDiscoveryJob = inngest.createFunction(
           newVideos,
         });
 
+        await supabase
+          .from("system_logs")
+          .insert({
+            event_type: "job_progress",
+            level: "info",
+            message: "Video discovery completed step",
+            job_id: jobId,
+            metadata: { videosFound: items.length, newVideos }
+          });
+
         return { videosFound: items.length, newVideos, videoIds: items.map((i: { video_id: string }) => i.video_id) };
       }) as unknown as { videosFound: number; newVideos: number; videoIds: string[] };
 
@@ -152,12 +173,12 @@ export const videoDiscoveryJob = inngest.createFunction(
         });
       }
 
-      // Step 5: Update final job status
+      // Step 5: Update final job status + log completion
       await step.run("complete-job-status", async () => {
         await inngest.send({
           name: "tiktok/job.status.update",
           data: {
-            jobId: `discovery-${Date.now()}`,
+            jobId,
             status: "completed",
             metadata: {
               videosFound: discoveryResult.videosFound,
@@ -166,6 +187,19 @@ export const videoDiscoveryJob = inngest.createFunction(
             }
           }
         });
+
+        await supabase
+          .from("system_logs")
+          .insert({
+            event_type: "job_complete",
+            level: "info",
+            message: "Video discovery job completed",
+            job_id: jobId,
+            metadata: {
+              videosFound: discoveryResult.videosFound,
+              newVideos: discoveryResult.newVideos
+            }
+          });
       });
 
       return {
@@ -187,6 +221,20 @@ export const videoDiscoveryJob = inngest.createFunction(
         stack: error instanceof Error ? error.stack : undefined,
         attempt
       });
+
+      await supabase
+        .from("system_logs")
+        .insert({
+          event_type: "job_error",
+          level: "error",
+          message: "Video discovery job failed",
+          job_id: jobId,
+          metadata: {
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+            attempt
+          }
+        });
 
       // Update job status to failed
       await step.run("fail-job-status", async () => {
@@ -236,7 +284,7 @@ export const manualVideoDiscoveryJob = inngest.createFunction(
     },
   },
   { event: "tiktok/video.discovery.manual" },
-  async ({ event, step, logger, attempt }) => {
+  async ({ event, logger, attempt }) => {
     const { videoId, forceRefresh = false, limit = 50 } = event.data;
 
     logger.info("Starting manual video discovery job", {

@@ -22,6 +22,7 @@ export const commentHarvestingJob = inngest.createFunction(
   { event: "tiktok/comment.harvest" },
   async ({ event, step, logger, attempt }) => {
     const { videoId, maxPages = 2, delayBetweenPages = 1000 } = event.data;
+    const jobId = `harvesting-${videoId}-${Date.now()}`;
 
     logger.info("Starting comment harvesting job", {
       videoId,
@@ -66,16 +67,26 @@ export const commentHarvestingJob = inngest.createFunction(
         return video;
       });
 
-      // Step 3: Update job status
+      // Step 3: Update job status + log start
       await step.run("update-job-status", async () => {
         await inngest.send({
           name: "tiktok/job.status.update",
           data: {
-            jobId: `harvesting-${videoId}-${Date.now()}`,
+            jobId,
             status: "running",
             metadata: { videoId, attempt, maxPages }
           }
         });
+
+        await supabase
+          .from("system_logs")
+          .insert({
+            event_type: "job_start",
+            level: "info",
+            message: "Comment harvesting started",
+            job_id: jobId,
+            metadata: { videoId, maxPages, attempt }
+          });
       });
 
       // Step 4: Rate limiting check (global token bucket for comments)
@@ -174,12 +185,12 @@ export const commentHarvestingJob = inngest.createFunction(
         });
       }
 
-      // Step 8: Update final job status
+      // Step 8: Update final job status + log completion
       await step.run("complete-job-status", async () => {
         await inngest.send({
           name: "tiktok/job.status.update",
           data: {
-            jobId: `harvesting-${videoId}-${Date.now()}`,
+            jobId,
             status: "completed",
             metadata: {
               videoId,
@@ -190,6 +201,21 @@ export const commentHarvestingJob = inngest.createFunction(
             }
           }
         });
+
+        await supabase
+          .from("system_logs")
+          .insert({
+            event_type: "job_complete",
+            level: "info",
+            message: "Comment harvesting completed",
+            job_id: jobId,
+            metadata: {
+              videoId,
+              commentsHarvested: harvestResult.commentsHarvested,
+              pagesProcessed: harvestResult.pagesProcessed,
+              domainsExtracted: harvestResult.domainsExtracted
+            }
+          });
       });
 
       return {
@@ -214,12 +240,27 @@ export const commentHarvestingJob = inngest.createFunction(
         attempt
       });
 
+      await supabase
+        .from("system_logs")
+        .insert({
+          event_type: "job_error",
+          level: "error",
+          message: "Comment harvesting job failed",
+          job_id: jobId,
+          metadata: {
+            videoId,
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+            attempt
+          }
+        });
+
       // Update job status to failed
       await step.run("fail-job-status", async () => {
         await inngest.send({
           name: "tiktok/job.status.update",
           data: {
-            jobId: `harvesting-${videoId}-${Date.now()}`,
+            jobId,
             status: "failed",
             metadata: {
               videoId,
