@@ -118,8 +118,8 @@ The application uses a custom design system with:
 
 - **Dashboard (/)**: Overview with key metrics and recent activity
 - **Domains (/domains)**: Comprehensive domain listing with search and filters
-- **Analytics**: Data visualization and trends (future)
-- **Videos**: Video processing status and statistics (future)
+- **Domain Detail (/domains/[id])**: Mentions, related videos, and activity for a specific domain
+- **Videos (/videos)**: Video processing status and statistics
 
 ## Development Guidelines
 
