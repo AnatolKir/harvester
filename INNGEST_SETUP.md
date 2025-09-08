@@ -205,6 +205,12 @@ DELETE /api/admin/kill-switch
 }
 ```
 
+### Admin UI (Kill Switch)
+
+- Web UI path: `/admin/kill-switch`
+- Admin-only (RBAC via `ADMIN_EMAILS` and middleware)
+- Actions: Activate/Deactivate with confirmation and reason; actions are logged to `system_logs`.
+
 #### Operator UI
 
 An SSR admin page is available at `/admin/kill-switch` to view current status and toggle the global kill switch. A mandatory reason and the authenticated admin identity are recorded with each action and surfaced in `system_logs`.
