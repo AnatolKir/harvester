@@ -48,7 +48,7 @@ export const GET = withSecurity(async (request) => {
 
   const supabase = await createClient();
 
-  // Prepare CSV stream
+  // Prepare CSV generator configuration
   const encoder = new TextEncoder();
   const chunkSize = 1000;
   const threshold = getThresholdForDateFilter(parsed.dateFilter);
@@ -57,14 +57,14 @@ export const GET = withSecurity(async (request) => {
   const ts = new Date().toISOString().split("T")[0];
   const filename = `domains_export_${ts}.csv`;
 
-  const stream = new ReadableStream<Uint8Array>({
-    async start(controller) {
-      // Header row
-      controller.enqueue(
-        encoder.encode("domain,total_mentions,first_seen,last_seen\n")
-      );
+  async function* generateCsvChunks(): AsyncGenerator<string, void, void> {
+    try {
+      // Header row first
+      yield "domain,total_mentions,first_seen,last_seen\n";
 
       let offset = 0;
+      // Iterate in chunks to keep memory bounded
+
       while (true) {
         let query = supabase
           .from("v_domains_overview")
@@ -78,33 +78,59 @@ export const GET = withSecurity(async (request) => {
 
         const { data, error } = await query;
         if (error) {
-          controller.error(
-            new Error(`Database query failed: ${error.message}`)
-          );
-          return;
+          throw new Error(`Database query failed: ${error.message}`);
         }
 
-        const rows = data || [];
-        if (rows.length === 0) break;
-
-        let csvChunk = "";
-        for (const row of rows as Array<{
+        const rows = (data || []) as Array<{
           domain: string;
           total_mentions: number;
           first_seen: string;
           last_seen: string;
-        }>) {
+        }>;
+
+        if (rows.length === 0) {
+          break;
+        }
+
+        let csvChunk = "";
+        for (const row of rows) {
           csvChunk += `${csvEscape(row.domain)},${csvEscape(
             row.total_mentions
           )},${csvEscape(row.first_seen)},${csvEscape(row.last_seen)}\n`;
         }
-        controller.enqueue(encoder.encode(csvChunk));
+        yield csvChunk;
         offset += rows.length;
 
-        if (rows.length < chunkSize) break; // done
+        if (rows.length < chunkSize) {
+          break; // completed
+        }
       }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "unknown error";
+      // Append an error footer so partial results are still downloadable
+      yield `# export_error: ${csvEscape(message)}\n`;
+    }
+  }
 
-      controller.close();
+  // Create a stream that pulls from the async generator (backpressure-aware)
+  const iterator: AsyncGenerator<string, void, void> = generateCsvChunks();
+  const stream = new ReadableStream<Uint8Array>({
+    async pull(controller) {
+      const { value, done } = await iterator.next();
+      if (done) {
+        controller.close();
+        return;
+      }
+      controller.enqueue(encoder.encode(value as string));
+    },
+    async cancel() {
+      if (typeof iterator.return === "function") {
+        try {
+          await iterator.return();
+        } catch {
+          // ignore
+        }
+      }
     },
   });
 

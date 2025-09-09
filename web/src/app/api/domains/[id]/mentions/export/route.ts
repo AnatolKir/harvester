@@ -5,7 +5,7 @@ import {
   withSecurity,
   AuthenticatedApiSecurity,
 } from "@/lib/security/middleware";
-import { addRateLimitHeaders } from "@/lib/api";
+import { addRateLimitHeaders, createErrorResponse } from "@/lib/api";
 
 const MentionsExportQuerySchema = z.object({
   since: z.string().datetime().optional(),
@@ -35,12 +35,9 @@ export const GET = withSecurity(async (request: NextRequest) => {
     .maybeSingle();
 
   if (domainError) {
-    return new NextResponse(
-      JSON.stringify({
-        success: false,
-        error: `Domain lookup failed: ${domainError.message}`,
-      }),
-      { status: 400, headers: { "Content-Type": "application/json" } }
+    return createErrorResponse(
+      `Domain lookup failed: ${domainError.message}`,
+      400
     );
   }
 
@@ -69,14 +66,13 @@ export const GET = withSecurity(async (request: NextRequest) => {
   const safeDomain = domain.replace(/[^a-zA-Z0-9_.-]/g, "_");
   const filename = `mentions_export_${safeDomain}_${ts}.csv`;
 
-  const stream = new ReadableStream<Uint8Array>({
-    async start(controller) {
+  async function* generateCsvChunks(): AsyncGenerator<string, void, void> {
+    try {
       // header (add video_url)
-      controller.enqueue(
-        encoder.encode("domain,comment_id,video_id,video_url,created_at\n")
-      );
+      yield "domain,comment_id,video_id,video_url,created_at\n";
 
       let offset = 0;
+
       while (true) {
         let query = supabase
           .from("v_domain_mentions_recent")
@@ -91,21 +87,24 @@ export const GET = withSecurity(async (request: NextRequest) => {
 
         const { data, error } = await query;
         if (error) {
-          controller.error(
-            new Error(`Database query failed: ${error.message}`)
-          );
-          return;
+          throw new Error(`Database query failed: ${error.message}`);
         }
 
-        const rows = data || [];
-        if (rows.length === 0) break;
+        const rows = (data || []) as Array<{
+          domain: string;
+          comment_id: string | null;
+          video_id: string | null;
+          created_at: string;
+        }>;
+
+        if (rows.length === 0) {
+          break;
+        }
 
         // Lookup video URLs for this chunk (schema-agnostic mapping)
         const videoIds = Array.from(
           new Set(
-            (rows as Array<{ video_id: string | null }>)
-              .map((r) => r.video_id)
-              .filter((v): v is string => Boolean(v))
+            rows.map((r) => r.video_id).filter((v): v is string => Boolean(v))
           )
         );
 
@@ -132,23 +131,43 @@ export const GET = withSecurity(async (request: NextRequest) => {
         }
 
         let csvChunk = "";
-        for (const row of rows as Array<{
-          domain: string;
-          comment_id: string | null;
-          video_id: string | null;
-          created_at: string;
-        }>) {
+        for (const row of rows) {
           const videoUrl = row.video_id ? videoUrlById[row.video_id] || "" : "";
           csvChunk += `${csvEscape(row.domain)},${csvEscape(
             row.comment_id
           )},${csvEscape(row.video_id)},${csvEscape(videoUrl)},${csvEscape(row.created_at)}\n`;
         }
-        controller.enqueue(encoder.encode(csvChunk));
+        yield csvChunk;
         offset += rows.length;
-        if (rows.length < chunkSize) break;
+        if (rows.length < chunkSize) {
+          break;
+        }
       }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "unknown error";
+      // error footer so that partial results are still usable
+      yield `# export_error: ${csvEscape(message)}\n`;
+    }
+  }
 
-      controller.close();
+  const iterator: AsyncGenerator<string, void, void> = generateCsvChunks();
+  const stream = new ReadableStream<Uint8Array>({
+    async pull(controller) {
+      const { value, done } = await iterator.next();
+      if (done) {
+        controller.close();
+        return;
+      }
+      controller.enqueue(encoder.encode(value as string));
+    },
+    async cancel() {
+      if (typeof iterator.return === "function") {
+        try {
+          await iterator.return();
+        } catch {
+          // ignore
+        }
+      }
     },
   });
 
