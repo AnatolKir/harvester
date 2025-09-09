@@ -41,7 +41,8 @@ export const GET = withSecurity(async (request: NextRequest) => {
     );
   }
 
-  if (!domainRow?.domain) {
+  const typedDomainRow = domainRow as { domain?: string } | null;
+  if (!typedDomainRow?.domain) {
     return new NextResponse("", {
       status: 200,
       headers: {
@@ -60,7 +61,7 @@ export const GET = withSecurity(async (request: NextRequest) => {
 
   const encoder = new TextEncoder();
   const chunkSize = 1000;
-  const domain = domainRow.domain as string;
+  const domain = String(typedDomainRow.domain);
 
   const ts = new Date().toISOString().split("T")[0];
   const safeDomain = domain.replace(/[^a-zA-Z0-9_.-]/g, "_");
