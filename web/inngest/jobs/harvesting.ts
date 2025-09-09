@@ -343,8 +343,13 @@ export const domainExtractionJob = inngest.createFunction(
         };
       }
 
+      type ProcessedDomain = {
+        domainId: string;
+        domainName: string;
+        mentionText: string;
+      };
       const processingResults = await step.run('process-domains', async () => {
-        const results = [] as any[];
+        const results: ProcessedDomain[] = [];
         for (const domainInfo of domains) {
           try {
             const { data: existingDomain } = await supabase
@@ -378,7 +383,7 @@ export const domainExtractionJob = inngest.createFunction(
               { onConflict: 'domain,video_id,comment_id' }
             );
 
-            processingResults.push({
+            results.push({
               domainId,
               domainName: domainInfo.domainName,
               mentionText: domainInfo.originalText,
@@ -390,7 +395,7 @@ export const domainExtractionJob = inngest.createFunction(
             });
           }
         }
-        return processingResults;
+        return results;
       });
 
       logger.info('Domain extraction completed', {
