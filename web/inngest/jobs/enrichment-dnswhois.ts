@@ -3,6 +3,7 @@ import { JobResult } from '../types';
 import { createClient } from '@supabase/supabase-js';
 import { acquireHttpEnrichmentToken } from '../../src/lib/rate-limit/buckets';
 import * as dns from 'node:dns/promises';
+import type { MxRecord } from 'node:dns';
 
 const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 
@@ -67,7 +68,7 @@ async function resolveDnsRecords(domainName: string): Promise<DnsMeta> {
   } catch {}
 
   try {
-    const mx = await withTimeout(dns.resolveMx(domainName), 5000).catch(() => [] as dns.MxRecord[]);
+    const mx = await withTimeout(dns.resolveMx(domainName), 5000).catch(() => [] as MxRecord[]);
     result.mx = Array.isArray(mx) && mx.length > 0;
   } catch {
     result.mx = false;
