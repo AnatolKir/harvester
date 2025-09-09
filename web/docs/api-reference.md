@@ -23,7 +23,16 @@ Authorization: Bearer <jwt_token>
 - **Headers**: Rate limit information is returned in response headers:
   - `X-RateLimit-Limit`: Maximum requests per hour
   - `X-RateLimit-Remaining`: Remaining requests in current window
-  - `X-RateLimit-Reset`: Unix timestamp when the rate limit resets
+  - `X-RateLimit-Reset`: Reset time for the current window
+
+## Correlation
+
+All responses include a correlation header for end-to-end tracing:
+
+- `X-Request-ID`: Unique request identifier (also logged server-side)
+- `X-Correlation-ID`: Alias of the same identifier, accepted on input to propagate across services
+
+Requests may include either `X-Request-ID` or `X-Correlation-ID` to propagate an existing ID; the API will echo it back and include it in logs.
 
 ## Response Format
 

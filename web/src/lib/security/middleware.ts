@@ -38,7 +38,7 @@ export interface SecurityContext {
 /**
  * Comprehensive security middleware that wraps API handlers
  */
-export function withSecurity<T extends any[]>(
+export function withSecurity<T extends unknown[]>(
   handler: (
     request: NextRequest,
     context: SecurityContext,
@@ -48,7 +48,11 @@ export function withSecurity<T extends any[]>(
 ) {
   return async (request: NextRequest, ...args: T): Promise<NextResponse> => {
     const startTime = Date.now();
-    const requestId = SecurityUtils.Auth.generateRequestId();
+    const incomingCorrelation =
+      request.headers.get("x-correlation-id") ||
+      request.headers.get("x-request-id");
+    const requestId =
+      incomingCorrelation || SecurityUtils.Auth.generateRequestId();
     const clientId = SecurityUtils.RateLimit.getClientIdentifier(request);
 
     try {
@@ -85,6 +89,7 @@ export function withSecurity<T extends any[]>(
       }
 
       // 3. Rate limiting
+      let rateLimitHeaders: Record<string, string> | undefined;
       if (options.rateLimitConfig !== false) {
         const rateLimitResult = await rateLimitMiddleware(request, {
           ...options.rateLimitConfig,
@@ -94,6 +99,10 @@ export function withSecurity<T extends any[]>(
         if ("error" in rateLimitResult) {
           return rateLimitResult;
         }
+        rateLimitHeaders = rateLimitResult.headers as unknown as Record<
+          string,
+          string
+        >;
       }
 
       // 4. Origin / CORS checks for non-GET
@@ -150,7 +159,7 @@ export function withSecurity<T extends any[]>(
               ...request,
               body: JSON.stringify(payload),
             });
-          } catch (error) {
+          } catch {
             return createSecurityErrorResponse("Invalid JSON payload", 400, {
               requestId,
             });
@@ -202,7 +211,7 @@ export function withSecurity<T extends any[]>(
               });
             }
           }
-        } catch (e) {
+        } catch {
           return createSecurityErrorResponse("Auth error", 401, { requestId });
         }
       }
@@ -215,8 +224,17 @@ export function withSecurity<T extends any[]>(
 
       // 9. Add request ID for tracking
       response.headers.set("X-Request-ID", requestId);
+      // Also expose a correlation header alias for compatibility
+      response.headers.set("X-Correlation-ID", requestId);
 
-      // 10. Log successful request
+      // 10. Add rate limit headers if available
+      if (rateLimitHeaders) {
+        for (const [key, value] of Object.entries(rateLimitHeaders)) {
+          response.headers.set(key, value);
+        }
+      }
+
+      // 11. Log successful request
       const duration = Date.now() - startTime;
       console.log(`API Request: ${request.method} ${request.url}`, {
         requestId,
@@ -256,7 +274,7 @@ export function withValidation<T, TRequest extends NextRequest>(
     async (request: NextRequest, context: SecurityContext) => {
       try {
         // Parse request data based on method
-        let data: any;
+        let data: unknown;
 
         if (request.method === "GET") {
           // Parse query parameters
@@ -321,7 +339,7 @@ export function withWebhookSecurity<TRequest extends NextRequest>(
 function createSecurityErrorResponse(
   message: string,
   status: number,
-  metadata?: Record<string, any>
+  metadata?: Record<string, unknown>
 ): NextResponse {
   const response = NextResponse.json(
     {
@@ -338,6 +356,7 @@ function createSecurityErrorResponse(
 
   if (metadata?.requestId) {
     response.headers.set("X-Request-ID", metadata.requestId);
+    response.headers.set("X-Correlation-ID", metadata.requestId);
   }
 
   return response;
@@ -387,7 +406,7 @@ function createValidationErrorResponse(
 /**
  * Recursively sanitize string values in an object
  */
-function sanitizeObjectStrings(obj: any): any {
+function sanitizeObjectStrings(obj: unknown): unknown {
   if (typeof obj === "string") {
     return SecurityUtils.Input.validateSearchQuery(obj) || "";
   }
@@ -397,8 +416,8 @@ function sanitizeObjectStrings(obj: any): any {
   }
 
   if (typeof obj === "object" && obj !== null) {
-    const sanitized: any = {};
-    for (const [key, value] of Object.entries(obj)) {
+    const sanitized: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
       sanitized[key] = sanitizeObjectStrings(value);
     }
     return sanitized;

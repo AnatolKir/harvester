@@ -1,64 +1,64 @@
-import { inngest } from "../client";
-import { JobResult } from "../types";
-import { createClient } from "@supabase/supabase-js";
-import { MCPClient } from "../../web/src/lib/mcp/client";
-import { acquireCommentsToken } from "../../web/src/lib/rate-limit/buckets";
-import { fetchCommentsForVideo } from "../../web/src/lib/mcp/comments";
-import { alertJobError } from "../../web/src/lib/alerts";
+import { inngest } from '../client';
+import { JobResult } from '../types';
+import { createClient } from '@supabase/supabase-js';
+import { MCPClient } from '../../web/src/lib/mcp/client';
+import { acquireCommentsToken } from '../../web/src/lib/rate-limit/buckets';
+import { fetchCommentsForVideo } from '../../web/src/lib/mcp/comments';
+import { alertJobError } from '../../web/src/lib/alerts';
+import { generateCorrelationId } from '../utils';
 
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 
 export const commentHarvestingJob = inngest.createFunction(
   {
-    id: "comment-harvesting",
-    name: "TikTok Comment Harvesting",
+    id: 'comment-harvesting',
+    name: 'TikTok Comment Harvesting',
     retries: 3,
     concurrency: {
       limit: 10,
     },
   },
-  { event: "tiktok/comment.harvest" },
+  { event: 'tiktok/comment.harvest' },
   async ({ event, step, logger, attempt }) => {
+    const correlationId = generateCorrelationId();
     const { videoId, maxPages = 2, delayBetweenPages = 1000 } = event.data;
     const jobId = `harvesting-${videoId}-${Date.now()}`;
 
-    logger.info("Starting comment harvesting job", {
+    logger.info('Starting comment harvesting job', {
       videoId,
       maxPages,
       delayBetweenPages,
       attempt,
+      correlationId,
     });
 
     try {
       // Step 1: Check kill switch
-      const killSwitchActive = await step.run("check-kill-switch", async () => {
+      const killSwitchActive = await step.run('check-kill-switch', async () => {
         const { data: killSwitch } = await supabase
-          .from("system_config")
-          .select("value")
-          .eq("key", "kill_switch_active")
+          .from('system_config')
+          .select('value')
+          .eq('key', 'kill_switch_active')
           .maybeSingle();
-        
+
         return killSwitch?.value === true;
       });
 
       if (killSwitchActive) {
-        logger.warn("Kill switch is active, aborting harvesting job");
+        logger.warn('Kill switch is active, aborting harvesting job');
         return {
           success: false,
-          error: "Kill switch is active",
-          metadata: { killSwitchTriggered: true }
+          error: 'Kill switch is active',
+          metadata: { killSwitchTriggered: true },
         };
       }
 
       // Step 2: Verify video exists and needs harvesting
-      const _videoInfo = await step.run("verify-video", async () => {
+      const _videoInfo = await step.run('verify-video', async () => {
         const { data: video, error } = await supabase
-          .from("video")
-          .select("id, video_id, last_scraped_at")
-          .eq("id", videoId)
+          .from('video')
+          .select('id, video_id, last_scraped_at')
+          .eq('id', videoId)
           .single();
 
         if (error) {
@@ -69,38 +69,36 @@ export const commentHarvestingJob = inngest.createFunction(
       });
 
       // Step 3: Update job status + log start
-      await step.run("update-job-status", async () => {
+      await step.run('update-job-status', async () => {
         await inngest.send({
-          name: "tiktok/job.status.update",
+          name: 'tiktok/job.status.update',
           data: {
             jobId,
-            status: "running",
-            metadata: { videoId, attempt, maxPages }
-          }
+            status: 'running',
+            metadata: { videoId, attempt, maxPages, correlationId },
+          },
         });
 
-        await supabase
-          .from("system_logs")
-          .insert({
-            event_type: "job_start",
-            level: "info",
-            message: "Comment harvesting started",
-            job_id: jobId,
-            metadata: { videoId, maxPages, attempt }
-          });
+        await supabase.from('system_logs').insert({
+          event_type: 'job_start',
+          level: 'info',
+          message: 'Comment harvesting started',
+          job_id: jobId,
+          metadata: { videoId, maxPages, attempt, correlationId },
+        });
       });
 
       // Step 4: Rate limiting check (global token bucket for comments)
-      await step.run("rate-limit-check", async () => {
-        await acquireCommentsToken({ identifier: "global", logger });
+      await step.run('rate-limit-check', async () => {
+        await acquireCommentsToken({ identifier: 'global', logger });
       });
 
       // Step 5: Harvest comments via MCP with retry/backoff and idempotency in-loop
-      const harvestResult = await step.run("harvest-comments", async () => {
+      const harvestResult = await step.run('harvest-comments', async () => {
         const mcp = new MCPClient({
           baseUrl: process.env.MCP_BASE_URL!,
           apiKey: process.env.BRIGHTDATA_MCP_API_KEY!,
-          stickyMinutes: parseInt(process.env.MCP_STICKY_SESSION_MINUTES || "10"),
+          stickyMinutes: parseInt(process.env.MCP_STICKY_SESSION_MINUTES || '10'),
         });
         // Retry with exponential backoff for transient errors
         const maxRetries = 5;
@@ -116,14 +114,26 @@ export const commentHarvestingJob = inngest.createFunction(
             const status = err?.status;
             const bodySnippet = err?.bodySnippet;
             const isTransient = err?.isTransient === true;
-            logger.warn("mcp_comments_failed", { status, isTransient, body: bodySnippet, attempt: attemptNum + 1, videoId });
+            logger.warn('mcp_comments_failed', {
+              status,
+              isTransient,
+              body: bodySnippet,
+              attempt: attemptNum + 1,
+              videoId,
+              correlationId,
+            });
             if (!isTransient || attemptNum >= maxRetries - 1) {
               throw err;
             }
             const base = 500 * Math.pow(2, attemptNum);
             const jitter = Math.floor(Math.random() * 250);
             const waitMs = Math.min(10000, base + jitter);
-            logger.info("backoff_wait", { waitMs, attempt: attemptNum + 1, videoId });
+            logger.info('backoff_wait', {
+              waitMs,
+              attempt: attemptNum + 1,
+              videoId,
+              correlationId,
+            });
             await new Promise((r) => setTimeout(r, waitMs));
             attemptNum++;
           }
@@ -134,89 +144,95 @@ export const commentHarvestingJob = inngest.createFunction(
         for (const c of comments) {
           if (!c.comment_id || seen.has(c.comment_id)) continue;
           seen.add(c.comment_id);
-          const { error } = await supabase
-            .from("comment")
-            .upsert(
-              {
-                id: c.comment_id,
-                video_id: videoId,
-                comment_id: c.comment_id,
-                content: c.text,
-                author_username: c.user_id,
-                posted_at: c.created_at,
-              },
-              { onConflict: "id" }
-            );
+          const { error } = await supabase.from('comment').upsert(
+            {
+              id: c.comment_id,
+              video_id: videoId,
+              comment_id: c.comment_id,
+              content: c.text,
+              author_username: c.user_id,
+              posted_at: c.created_at,
+            },
+            { onConflict: 'id' }
+          );
           if (!error) _inserted++;
         }
 
-        return { commentsHarvested: comments.length, pagesProcessed: maxPages, domainsExtracted: 0, newComments: comments };
+        return {
+          commentsHarvested: comments.length,
+          pagesProcessed: maxPages,
+          domainsExtracted: 0,
+          newComments: comments,
+        };
       });
 
       // Step 6: Update video last_crawled_at
-      await step.run("update-video-crawled", async () => {
+      await step.run('update-video-crawled', async () => {
         const { error } = await supabase
-          .from("video")
+          .from('video')
           .update({
             last_scraped_at: new Date().toISOString(),
-            comment_count: harvestResult.commentsHarvested
+            comment_count: harvestResult.commentsHarvested,
           })
-          .eq("id", videoId);
+          .eq('id', videoId);
 
         if (error) {
-          logger.warn("Failed to update video last_crawled_at", { error: error instanceof Error ? error.message : String(error) });
+          logger.warn('Failed to update video last_crawled_at', {
+            error: error instanceof Error ? error.message : String(error),
+          });
         }
       });
 
       // Step 7: Trigger domain extraction for new comments (if any)
       if (harvestResult.newComments && harvestResult.newComments.length > 0) {
-        await step.run("trigger-domain-extraction", async () => {
+        await step.run('trigger-domain-extraction', async () => {
           const extractionPromises = harvestResult.newComments.map((comment: any) =>
             inngest.send({
-              name: "tiktok/domain.extract",
-              data: { commentId: comment.comment_id, videoId: videoId, commentText: comment.text }
+              name: 'tiktok/domain.extract',
+              data: { commentId: comment.comment_id, videoId: videoId, commentText: comment.text },
             })
           );
 
           await Promise.all(extractionPromises);
-          
-          logger.info("Triggered domain extraction jobs", {
-            count: extractionPromises.length
+
+          logger.info('Triggered domain extraction jobs', {
+            count: extractionPromises.length,
+            correlationId,
           });
         });
       }
 
       // Step 8: Update final job status + log completion
-      await step.run("complete-job-status", async () => {
+      await step.run('complete-job-status', async () => {
         await inngest.send({
-          name: "tiktok/job.status.update",
+          name: 'tiktok/job.status.update',
           data: {
             jobId,
-            status: "completed",
+            status: 'completed',
             metadata: {
               videoId,
               commentsHarvested: harvestResult.commentsHarvested,
               pagesProcessed: harvestResult.pagesProcessed,
               domainsExtracted: harvestResult.domainsExtracted,
-              extractionJobsTriggered: harvestResult.newComments?.length || 0
-            }
-          }
+              extractionJobsTriggered: harvestResult.newComments?.length || 0,
+              correlationId,
+            },
+          },
         });
 
-        await supabase
-          .from("system_logs")
-          .insert({
-            event_type: "job_complete",
-            level: "info",
-            message: "Comment harvesting completed",
-            job_id: jobId,
-            metadata: {
-              videoId,
-              commentsHarvested: harvestResult.commentsHarvested,
-              pagesProcessed: harvestResult.pagesProcessed,
-              domainsExtracted: harvestResult.domainsExtracted
-            }
-          });
+        await supabase.from('system_logs').insert({
+          event_type: 'job_complete',
+          level: 'info',
+          message: 'Comment harvesting completed',
+          job_id: jobId,
+          metadata: {
+            videoId,
+            commentsHarvested: harvestResult.commentsHarvested,
+            pagesProcessed: harvestResult.pagesProcessed,
+            domainsExtracted: harvestResult.domainsExtracted,
+            correlationId,
+          },
+        });
       });
 
       return {
@@ -225,20 +241,20 @@ export const commentHarvestingJob = inngest.createFunction(
           videoId,
           commentsHarvested: harvestResult.commentsHarvested,
           pagesProcessed: harvestResult.pagesProcessed,
-          domainsExtracted: harvestResult.domainsExtracted
+          domainsExtracted: harvestResult.domainsExtracted,
         },
         metadata: {
           executionTime: Date.now(),
-          attempt
-        }
+          attempt,
+        },
       } as JobResult;
-
     } catch (error) {
-      logger.error("Comment harvesting job failed", {
+      logger.error('Comment harvesting job failed', {
         error: error instanceof Error ? error.message : String(error),
         stack: error instanceof Error ? error.stack : undefined,
         videoId,
-        attempt
+        attempt,
+        correlationId,
       });
 
       const jobId = `harvesting-${videoId}`;
@@ -247,49 +263,49 @@ export const commentHarvestingJob = inngest.createFunction(
         attempt,
       });
 
-      await supabase
-        .from("system_logs")
-        .insert({
-          event_type: "job_error",
-          level: "error",
-          message: "Comment harvesting job failed",
-          job_id: jobId,
-          metadata: {
-            videoId,
-            error: error instanceof Error ? error.message : String(error),
-            stack: error instanceof Error ? error.stack : undefined,
-            attempt
-          }
-        });
+      await supabase.from('system_logs').insert({
+        event_type: 'job_error',
+        level: 'error',
+        message: 'Comment harvesting job failed',
+        job_id: jobId,
+        metadata: {
+          videoId,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined,
+          attempt,
+          correlationId,
+        },
+      });
 
       // Update job status to failed
-      await step.run("fail-job-status", async () => {
+      await step.run('fail-job-status', async () => {
         await inngest.send({
-          name: "tiktok/job.status.update",
+          name: 'tiktok/job.status.update',
           data: {
             jobId,
-            status: "failed",
+            status: 'failed',
             metadata: {
               videoId,
               error: error instanceof Error ? error.message : String(error),
               attempt,
-              willRetry: attempt < 3
-            }
-          }
+              willRetry: attempt < 3,
+              correlationId,
+            },
+          },
         });
       });
 
       // If this is the final attempt, send to dead letter queue
       if (attempt >= 3) {
-        await step.run("send-to-dead-letter-queue", async () => {
+        await step.run('send-to-dead-letter-queue', async () => {
           await inngest.send({
-            name: "tiktok/system.retry",
+            name: 'tiktok/system.retry',
             data: {
-              originalEventName: "tiktok/comment.harvest",
+              originalEventName: 'tiktok/comment.harvest',
               originalPayload: event.data,
               attempt,
-              lastError: error instanceof Error ? error.message : String(error)
-            }
+              lastError: error instanceof Error ? error.message : String(error),
+            },
           });
         });
       }
@@ -301,18 +317,18 @@ export const commentHarvestingJob = inngest.createFunction(
 
 export const domainExtractionJob = inngest.createFunction(
   {
-    id: "domain-extraction",
-    name: "Domain Extraction from Comments",
+    id: 'domain-extraction',
+    name: 'Domain Extraction from Comments',
     retries: 2,
     concurrency: {
       limit: 50,
     },
   },
-  { event: "tiktok/domain.extract" },
+  { event: 'tiktok/domain.extract' },
   async ({ event, step, logger, attempt }) => {
     const { commentId, videoId, commentText } = event.data;
 
-    logger.info("Starting domain extraction job", {
+    logger.info('Starting domain extraction job', {
       commentId,
       videoId,
       commentTextLength: commentText.length,
@@ -321,11 +337,12 @@ export const domainExtractionJob = inngest.createFunction(
 
     try {
       // Step 1: Extract domains from comment text
-      const domains = await step.run("extract-domains", async () => {
+      const domains = await step.run('extract-domains', async () => {
         // Domain extraction regex (basic implementation)
-        const domainRegex = /(?:https?:\/\/)?(?:www\.)?([a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}/g;
+        const domainRegex =
+          /(?:https?:\/\/)?(?:www\.)?([a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}/g;
         const matches = commentText.match(domainRegex);
-        
+
         if (!matches) return [];
 
         return matches.map((match: string) => {
@@ -333,60 +350,60 @@ export const domainExtractionJob = inngest.createFunction(
           let domain = match.replace(/^https?:\/\//, '').replace(/^www\./, '');
           // Remove trailing slash and path
           domain = domain.split('/')[0];
-          
+
           const parts = domain.split('.');
           return {
             fullDomain: domain,
             tld: parts[parts.length - 1],
             subdomain: parts.length > 2 ? parts.slice(0, -2).join('.') : null,
             domainName: parts.length > 1 ? parts.slice(-2).join('.') : domain,
-            originalText: match
+            originalText: match,
           };
         });
       });
 
       if (domains.length === 0) {
-        logger.info("No domains found in comment", { commentId });
+        logger.info('No domains found in comment', { commentId });
         return {
           success: true,
           data: { domainsExtracted: 0 },
-          metadata: { attempt }
+          metadata: { attempt },
         };
       }
 
       // Step 2: Process each domain
-      const processingResults = await step.run("process-domains", async () => {
+      const processingResults = await step.run('process-domains', async () => {
         const results = [];
-        
+
         for (const domainInfo of domains) {
           try {
             // Check if domain exists, create if not
             const { data: existingDomain, error: _selectError } = await supabase
-              .from("domain")
-              .select("id")
-              .eq("domain", domainInfo.domainName)
+              .from('domain')
+              .select('id')
+              .eq('domain', domainInfo.domainName)
               .maybeSingle();
 
             let domainId;
-            
+
             if (existingDomain) {
               domainId = existingDomain.id;
             } else {
               // Create new domain
               const { data: newDomain, error: insertError } = await supabase
-                .from("domain")
+                .from('domain')
                 .insert({
                   domain: domainInfo.domainName,
                   first_seen: new Date().toISOString(),
                   last_seen: new Date().toISOString(),
                 })
-                .select("id")
+                .select('id')
                 .single();
 
               if (insertError) {
-                logger.error("Failed to create domain", {
+                logger.error('Failed to create domain', {
                   domain: domainInfo.domainName,
-                  error: insertError instanceof Error ? insertError.message : String(insertError)
+                  error: insertError instanceof Error ? insertError.message : String(insertError),
                 });
                 continue;
               }
@@ -395,23 +412,21 @@ export const domainExtractionJob = inngest.createFunction(
             }
 
             // Create domain mention
-            const { error: mentionError } = await supabase
-              .from("domain_mention")
-              .upsert(
-                {
-                  domain: domainInfo.domainName,
-                  comment_id: commentId,
-                  video_id: videoId,
-                  created_at: new Date().toISOString()
-                },
-                { onConflict: 'domain,video_id,comment_id' }
-              );
+            const { error: mentionError } = await supabase.from('domain_mention').upsert(
+              {
+                domain: domainInfo.domainName,
+                comment_id: commentId,
+                video_id: videoId,
+                created_at: new Date().toISOString(),
+              },
+              { onConflict: 'domain,video_id,comment_id' }
+            );
 
             if (mentionError) {
-              logger.error("Failed to create domain mention", {
+              logger.error('Failed to create domain mention', {
                 domainId,
                 commentId,
-                error: mentionError instanceof Error ? mentionError.message : String(mentionError)
+                error: mentionError instanceof Error ? mentionError.message : String(mentionError),
               });
               continue;
             }
@@ -419,13 +434,12 @@ export const domainExtractionJob = inngest.createFunction(
             results.push({
               domainId,
               domainName: domainInfo.domainName,
-              mentionText: domainInfo.originalText
+              mentionText: domainInfo.originalText,
             });
-
           } catch (error) {
-            logger.error("Failed to process domain", {
+            logger.error('Failed to process domain', {
               domain: domainInfo.domainName,
-              error: error instanceof Error ? error.message : String(error)
+              error: error instanceof Error ? error.message : String(error),
             });
           }
         }
@@ -433,30 +447,29 @@ export const domainExtractionJob = inngest.createFunction(
         return results;
       });
 
-      logger.info("Domain extraction completed", {
+      logger.info('Domain extraction completed', {
         commentId,
         domainsExtracted: processingResults.length,
-        totalDomainsFound: domains.length
+        totalDomainsFound: domains.length,
       });
 
       return {
         success: true,
         data: {
           domainsExtracted: processingResults.length,
-          domains: processingResults
+          domains: processingResults,
         },
         metadata: {
           executionTime: Date.now(),
-          attempt
-        }
+          attempt,
+        },
       } as JobResult;
-
     } catch (error) {
-      logger.error("Domain extraction job failed", {
+      logger.error('Domain extraction job failed', {
         error: error instanceof Error ? error.message : String(error),
         stack: error instanceof Error ? error.stack : undefined,
         commentId,
-        attempt
+        attempt,
       });
 
       throw error;

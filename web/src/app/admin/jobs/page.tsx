@@ -5,6 +5,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import type { AdminJobsData, JobMetric } from "@/types/admin";
 
+type RateLimitMetrics = {
+  totalEvents: number;
+  blockedRequests: number;
+  abusePatterns: Array<{
+    identifier: string;
+    attempts: number;
+    blockedAttempts: number;
+    firstSeen: number;
+    lastSeen: number;
+  }>;
+};
+
 async function getJobsData(
   hours: number,
   type?: string,
@@ -26,6 +38,22 @@ async function getJobsData(
   }
   const json = await res.json();
   return json.data as AdminJobsData;
+}
+
+async function getRateLimitMetrics(
+  cookieHeader?: string
+): Promise<RateLimitMetrics | null> {
+  const base = (
+    process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3032"
+  ).replace(/\/$/, "");
+  const url = `${base}/api/metrics/rate-limits`;
+  const res = await fetch(url, {
+    cache: "no-store",
+    headers: cookieHeader ? { cookie: cookieHeader } : undefined,
+  });
+  if (!res.ok) return null;
+  const json = await res.json();
+  return json.data as RateLimitMetrics;
 }
 
 function formatPercent(value: number) {
@@ -75,6 +103,7 @@ export default async function AdminJobsPage({
     .map((c) => `${c.name}=${c.value}`)
     .join("; ");
   const data = await getJobsData(hours, typeParam, cookieHeader);
+  const rateMetrics = await getRateLimitMetrics(cookieHeader);
 
   const overallSuccess = computeOverallSuccess(data.jobMetrics || []);
   const lastSuccessfulRun = [
@@ -242,6 +271,67 @@ export default async function AdminJobsPage({
             <div className="text-muted-foreground pt-1 text-xs">
               p50/p95 pending backend support; showing averages.
             </div>
+          </CardContent>
+        </Card>
+        {/* Rate limit metrics */}
+        <Card>
+          <CardHeader>
+            <CardTitle>API Rate Limits</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {!rateMetrics && (
+              <div className="text-muted-foreground text-sm">No data</div>
+            )}
+            {rateMetrics && (
+              <>
+                <div className="flex items-center justify-between text-sm">
+                  <span>Total events</span>
+                  <span className="tabular-nums">
+                    {rateMetrics.totalEvents}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span>Blocked requests</span>
+                  <span className="tabular-nums">
+                    {rateMetrics.blockedRequests}
+                  </span>
+                </div>
+                <div>
+                  <div className="bg-muted h-3 rounded">
+                    <div
+                      className="bg-destructive h-3 rounded"
+                      style={{
+                        width: `${rateMetrics.totalEvents > 0 ? Math.min(100, (rateMetrics.blockedRequests / Math.max(1, rateMetrics.totalEvents)) * 100) : 0}%`,
+                      }}
+                    />
+                  </div>
+                  <div className="text-muted-foreground mt-1 text-xs">
+                    Blocked ratio
+                  </div>
+                </div>
+                <div>
+                  <div className="text-sm font-medium">Top offenders</div>
+                  {(rateMetrics.abusePatterns || []).slice(0, 5).map((p) => (
+                    <div
+                      key={p.identifier}
+                      className="flex items-center justify-between text-xs"
+                    >
+                      <span className="truncate" title={p.identifier}>
+                        {p.identifier}
+                      </span>
+                      <span className="tabular-nums">
+                        {p.blockedAttempts}/{p.attempts}
+                      </span>
+                    </div>
+                  ))}
+                  {(rateMetrics.abusePatterns || []).length === 0 && (
+                    <div className="text-muted-foreground text-xs">
+                      No abuse patterns
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
       </div>

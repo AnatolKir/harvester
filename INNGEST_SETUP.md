@@ -305,6 +305,12 @@ The system tracks:
 - **Error Rates**: Failed jobs and error types
 - **Last Successful Runs**: Time since last successful discovery/harvest
 
+### Correlation IDs
+
+- Each API request and job execution includes a correlation ID used for tracing across logs and systems.
+- Incoming `X-Correlation-ID` or `X-Request-ID` headers are honored and propagated.
+- Inngest jobs attach `correlationId` in their log metadata (`system_logs.metadata.correlationId`).
+
 ### Alert Conditions
 
 Alerts trigger when:
