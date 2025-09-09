@@ -16,14 +16,6 @@
   "env": {
     "NODE_ENV": "production"
   },
-  "functions": {
-    "web/pages/api/**/*.js": {
-      "maxDuration": 30
-    },
-    "web/app/api/**/*.js": {
-      "maxDuration": 30
-    }
-  },
   "headers": [
     {
       "source": "/api/(.*)",
