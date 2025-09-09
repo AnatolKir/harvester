@@ -117,11 +117,17 @@ async function handleDomainGet(
     throw new Error(`Database query failed: ${domainError.message}`);
   }
 
+  // Ensure domain row is present and safely typed
+  const domainRow = domain as Domain | null;
+  if (!domainRow || typeof domainRow.domain !== "string") {
+    throw new Error("Domain not found");
+  }
+
   // Get recent mentions with related data
   const { data: mentions, error: mentionsError } = await supabase
     .from("domain_mention")
     .select("id, domain, video_id, comment_id, created_at")
-    .eq("domain", domain.domain)
+    .eq("domain", domainRow.domain)
     .order("created_at", { ascending: false })
     .limit(20)
     .returns<
