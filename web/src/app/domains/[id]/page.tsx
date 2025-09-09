@@ -393,14 +393,19 @@ export default async function DomainDetailPage({
             )}
             {whoisMeta && (
               <>
+                <span
+                  className={`inline-flex items-center rounded-full border px-2 py-1 ${
+                    whoisMeta.created_at
+                      ? "bg-emerald-50 text-emerald-800"
+                      : "bg-amber-50 text-amber-800"
+                  }`}
+                >
+                  Registered: {whoisMeta.created_at ? "Yes" : "No"}
+                </span>
                 {whoisMeta.created_at && (
                   <span className="inline-flex items-center rounded-full border bg-slate-50 px-2 py-1 text-slate-800">
-                    Created {new Date(whoisMeta.created_at).getFullYear()}
-                  </span>
-                )}
-                {whoisMeta.registrar && (
-                  <span className="inline-flex items-center rounded-full border bg-slate-50 px-2 py-1 text-slate-800">
-                    {whoisMeta.registrar}
+                    Registered{" "}
+                    {new Date(whoisMeta.created_at).toLocaleDateString()}
                   </span>
                 )}
               </>
