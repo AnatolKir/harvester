@@ -64,12 +64,22 @@ This project uses environment variables for configuration. All sensitive keys an
 - **SUPABASE_URL**: Supabase URL for worker (defaults to NEXT_PUBLIC_SUPABASE_URL)
 - **SUPABASE_SERVICE_KEY**: Service key for worker (defaults to SUPABASE_SERVICE_ROLE_KEY)
 - **WORKER_WEBHOOK_URL**: Webhook URL for triggering worker jobs
+- **WORKER_API_KEY**: Shared secret for authenticating worker-originated callbacks
 
 ### Inngest Configuration
 
 - **INNGEST_EVENT_KEY**: Event key for Inngest (optional for local development)
 - **INNGEST_SIGNING_KEY**: Signing key for webhook validation
 - **INNGEST_APP_ID**: Application ID (defaults to 'tiktok-harvester')
+- **INNGEST_SERVE_HOST**: Serve host for Inngest dev/cloud webhook
+  - Dev: `http://localhost:3032`
+  - Prod: `https://yourdomain.com`
+
+### Job Rate Limits
+
+- **DISCOVERY_RPM**: Max discovery requests per minute (default 30)
+- **COMMENTS_RPM**: Max comments fetch requests per minute (default 60)
+- **HTTP_ENRICH_RPM**: Max HTTP enrichment requests per minute (default 30)
 
 ### Slack Alerting (Optional)
 
@@ -96,8 +106,13 @@ When enabled, the system will post alerts for:
   - Example: `https://mcp.example.com`
   - Dev convenience: defaults to `http://localhost:3333` if unset
 - **MCP_STICKY_SESSION_MINUTES**: Sticky session TTL in minutes (default 10)
-- **DISCOVERY_RPM**: Max discovery requests per minute (default 30)
-- **COMMENTS_RPM**: Max comments fetch requests per minute (default 60)
+
+### Admin Security (RBAC & Origins)
+
+- **ADMIN_EMAILS**: Comma-separated list of admin emails allowed to access `/api/admin/*`
+  - Example: `admin1@example.com,admin2@example.com`
+- **ADMIN_ALLOWED_ORIGINS**: Comma-separated list of allowed admin UI origins
+  - Example: `https://yourdomain.com,https://staging.yourdomain.com`
 
 ### Legacy (Deprecated) Playwright Proxy Variables
 

@@ -56,9 +56,19 @@ INNGEST_EVENT_KEY=your_event_key
 INNGEST_SIGNING_KEY=signkey-your_signing_key
 INNGEST_SERVE_HOST=https://yourdomain.com
 
+# Job Rate Limits
+DISCOVERY_RPM=30
+COMMENTS_RPM=60
+HTTP_ENRICH_RPM=30
+
 # Worker - Background Processing (Optional)
 WORKER_WEBHOOK_URL=https://your-worker.railway.app
 WORKER_API_KEY=your_worker_api_key
+
+# MCP (Bright Data) - Optional
+BRIGHTDATA_MCP_API_KEY=bd_xxx
+MCP_BASE_URL=https://mcp.example.com
+MCP_STICKY_SESSION_MINUTES=10
 
 # Slack Alerting (Optional)
 SLACK_ALERTS_ENABLED=true

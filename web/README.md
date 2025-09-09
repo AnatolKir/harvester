@@ -138,3 +138,42 @@ The application uses a custom design system with:
 3. Test responsive design on different screen sizes
 4. Run linting and type checking before committing
 5. Update this README for significant changes
+
+## Operator Guide
+
+Admin-only operational features are available in the dashboard. RBAC is enforced via `ADMIN_EMAILS` and allowed origins via `ADMIN_ALLOWED_ORIGINS`.
+
+### Admin UI
+
+- Kill Switch: `/admin/kill-switch` — Activate/Deactivate global processing with mandatory reason. Actions are logged to `system_logs`.
+- Jobs & Health: `/admin/jobs` — Success rate, last successful run, DLQ size, in-progress jobs; charts and recent executions.
+- Dead Letter Queue: `/admin/dead-letter-queue` — Inspect failed jobs; Retry/Delete with confirmation and audit logging.
+- System Logs: `/admin/logs` — Filter by level, job type, timeframe, correlation ID, and event type.
+
+### Alerts & Thresholds
+
+- Alerts trigger when:
+  - Kill switch is active
+  - No successful discovery in 30+ minutes
+  - No successful harvesting in 60+ minutes
+  - Job success rate < 70%
+  - DLQ size ≥ 10
+
+### Backfill (Discovery)
+
+Trigger a historical backfill via Admin API:
+
+```bash
+curl -s -X POST "https://yourdomain.com/api/admin/jobs" \
+  -H "Content-Type: application/json" \
+  -d '{"action":"trigger_backfill","days":7,"limit":100}' | jq
+```
+
+Notes:
+
+- Respects global token bucket (`DISCOVERY_RPM`).
+- Idempotent upserts on `video(video_id)`; resumes from checkpoint on restart.
+
+### Runbooks
+
+See incident procedures in `web/docs/incidents.md` and operator details in `web/docs/operator-runbook.md`.

@@ -98,6 +98,9 @@ MAX_CONCURRENT_DISCOVERY_JOBS=5
 MAX_CONCURRENT_HARVESTING_JOBS=10
 DISCOVERY_JOB_TIMEOUT_MINUTES=30
 HARVESTING_JOB_TIMEOUT_MINUTES=60
+# Rate limits
+DISCOVERY_RPM=30
+COMMENTS_RPM=60
 # HTTP Enrichment
 HTTP_ENRICH_RPM=30
 
@@ -421,6 +424,7 @@ await inngest.send({
 2. **System Health API**: Set up external monitoring
 3. **Database Queries**: Monitor system_logs table
 4. **Alerts**: Configure notifications for kill switch activation
+5. **Escalation Path**: For provider outages (e.g., MCP), page on-call, open a ticket with provider support, and consider temporary throttling or activating Kill Switch to prevent cascading failures.
 
 ### Security
 
