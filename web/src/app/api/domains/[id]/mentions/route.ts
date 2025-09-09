@@ -24,14 +24,15 @@ export const GET = withSecurity(async (request: NextRequest) => {
     throw new Error(`Domain lookup failed: ${domainError.message}`);
   }
 
-  if (!domainRow?.domain) {
+  const typedDomainRow = domainRow as { domain?: string } | null;
+  if (!typedDomainRow?.domain) {
     return createSuccessResponse([]);
   }
 
   const { data, error } = await supabase
     .from("v_domain_mentions_recent")
     .select("domain, comment_id, video_id, created_at")
-    .eq("domain", domainRow.domain)
+    .eq("domain", String(typedDomainRow.domain))
     .order("created_at", { ascending: false })
     .limit(200);
 
