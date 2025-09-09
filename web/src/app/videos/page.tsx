@@ -20,15 +20,16 @@ import type { Database } from "@/types/database";
 
 type VideoRow = Database["public"]["Tables"]["video"]["Row"];
 
-interface VideoWithStats extends Pick<
-  VideoRow,
-  | "id"
-  | "video_id"
-  | "url"
-  | "created_at"
-  | "last_scraped_at"
-  | "scrape_status"
-> {
+interface VideoWithStats
+  extends Pick<
+    VideoRow,
+    | "id"
+    | "video_id"
+    | "url"
+    | "created_at"
+    | "last_scraped_at"
+    | "scrape_status"
+  > {
   domain_count: number;
   comment_count_with_domains: number;
 }
@@ -47,28 +48,25 @@ export const dynamic = "force-dynamic";
 export default async function VideosPage({
   searchParams,
 }: {
-  searchParams?: SearchParams;
+  searchParams?: Promise<SearchParams>;
 }) {
   const supabase = await createClient();
 
-  const search = (searchParams?.search || "").trim();
-  const status = (searchParams?.status || "all") as SearchParams["status"];
-  const cursor = searchParams?.cursor || undefined;
+  const sp = (await searchParams) || {};
+  const search = (sp.search || "").trim();
+  const status = (sp.status || "all") as SearchParams["status"];
+  const cursor = sp.cursor || undefined;
   const limitNum = Math.min(
-    Math.max(parseInt(searchParams?.limit || "25", 10) || 25, 1),
+    Math.max(parseInt(sp.limit || "25", 10) || 25, 1),
     100
   );
-  const sort = (searchParams?.sort || "created_at") as NonNullable<
-    SearchParams["sort"]
-  >;
-  const dir = (searchParams?.dir || "desc") as NonNullable<SearchParams["dir"]>;
+  const sort = (sp.sort || "created_at") as NonNullable<SearchParams["sort"]>;
+  const dir = (sp.dir || "desc") as NonNullable<SearchParams["dir"]>;
 
   // Build base query against video table for filtering, sorting, cursoring
   let query = supabase
     .from("video")
-    .select(
-      "id, video_id, url, created_at, last_scraped_at, scrape_status"
-    );
+    .select("id, video_id, url, created_at, last_scraped_at, scrape_status");
 
   if (search) {
     // Search across common fields
@@ -152,7 +150,8 @@ export default async function VideosPage({
 
   // Compute next cursor
   const last = videos[videos.length - 1];
-  const nextCursor = hasMore && last ? Buffer.from(String(last[sort])).toString("base64") : null;
+  const nextCursor =
+    hasMore && last ? Buffer.from(String(last[sort])).toString("base64") : null;
 
   return (
     <div className="space-y-6 p-6">
@@ -210,7 +209,9 @@ export default async function VideosPage({
                       ? new Date(v.last_scraped_at).toLocaleString()
                       : "—"}
                   </TableCell>
-                  <TableCell className="capitalize">{v.scrape_status || "—"}</TableCell>
+                  <TableCell className="capitalize">
+                    {v.scrape_status || "—"}
+                  </TableCell>
                 </TableRow>
               ))
             )}
@@ -232,7 +233,14 @@ export default async function VideosPage({
             <PaginationItem>
               {nextCursor ? (
                 <PaginationNext
-                  href={buildHref({ search, status, sort, dir, limit: limitNum, cursor: nextCursor })}
+                  href={buildHref({
+                    search,
+                    status,
+                    sort,
+                    dir,
+                    limit: limitNum,
+                    cursor: nextCursor,
+                  })}
                 />
               ) : (
                 <PaginationNext
@@ -267,5 +275,3 @@ function buildHref(params: {
   const qs = sp.toString();
   return qs ? `/videos?${qs}` : "/videos";
 }
-
-
