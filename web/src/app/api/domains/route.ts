@@ -2,7 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { DomainsQuerySchema } from "@/lib/validations";
 import { createPaginatedResponse } from "@/lib/api";
-import { withValidation, AuthenticatedApiSecurity } from "@/lib/security/middleware";
+import { utcThresholdForFilter } from "@/lib/date";
+import {
+  withValidation,
+  AuthenticatedApiSecurity,
+} from "@/lib/security/middleware";
 // Domain types come from view; no direct table type import here
 
 /**
@@ -114,36 +118,26 @@ export const GET = withValidation(
       sortBy === "first_seen"
         ? "first_seen"
         : sortBy === "last_seen"
-        ? "last_seen"
-        : sortBy === "total_mentions"
-        ? "total_mentions"
-        : "last_seen"; // default
+          ? "last_seen"
+          : sortBy === "total_mentions"
+            ? "total_mentions"
+            : "last_seen"; // default
 
     let query = supabase
       .from("v_domains_overview")
-      .select("domain, total_mentions, first_seen, last_seen", { count: "exact" });
+      .select("domain, total_mentions, first_seen, last_seen", {
+        count: "exact",
+      });
 
     if (search) {
       query = query.ilike("domain", `%${search}%`);
     }
 
     if (dateFilter !== "all") {
-      const now = new Date();
-      let threshold: Date;
-      switch (dateFilter) {
-        case "today":
-          threshold = new Date(now.setHours(0, 0, 0, 0));
-          break;
-        case "week":
-          threshold = new Date(now.setDate(now.getDate() - 7));
-          break;
-        case "month":
-          threshold = new Date(now.setMonth(now.getMonth() - 1));
-          break;
-        default:
-          threshold = new Date(0);
+      const thresholdISO = utcThresholdForFilter(dateFilter);
+      if (thresholdISO) {
+        query = query.gte("first_seen", thresholdISO);
       }
-      query = query.gte("first_seen", threshold.toISOString());
     }
 
     query = query.order(sortColumn, { ascending: sortOrder === "asc" });

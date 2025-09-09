@@ -6,6 +6,7 @@ import {
   AuthenticatedApiSecurity,
 } from "@/lib/security/middleware";
 import { DateFilterSchema } from "@/lib/validations/api";
+import { utcThresholdForFilter } from "@/lib/date";
 import { addRateLimitHeaders } from "@/lib/api";
 
 const ExportQuerySchema = z.object({
@@ -22,21 +23,8 @@ function csvEscape(value: unknown): string {
 }
 
 function getThresholdForDateFilter(dateFilter: string): string | null {
-  if (dateFilter === "all") return null;
-  const now = new Date();
-  switch (dateFilter) {
-    case "today":
-      now.setHours(0, 0, 0, 0);
-      return now.toISOString();
-    case "week":
-      now.setDate(now.getDate() - 7);
-      return now.toISOString();
-    case "month":
-      now.setMonth(now.getMonth() - 1);
-      return now.toISOString();
-    default:
-      return null;
-  }
+  const f = dateFilter as unknown as "today" | "week" | "month" | "all";
+  return utcThresholdForFilter(f);
 }
 
 export const GET = withSecurity(async (request) => {
