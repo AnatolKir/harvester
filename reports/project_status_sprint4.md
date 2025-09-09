@@ -29,7 +29,15 @@ A comment-first system that discovers U.S. promoted TikTok videos, harvests comm
   - Admin APIs for jobs/kill switch/config/DLQ; Inngest Cloud readiness.
   - DB indexes/constraints added; schema docs updated.
 
-References: `web/docs/ENVIRONMENT.md`, `INNGEST_SETUP.md`, `supabase/schema_documentation.md`, `web/docs/api-reference.md`.
+References:
+
+- [Environment Setup](../web/docs/ENVIRONMENT.md)
+- [Inngest Setup](../INNGEST_SETUP.md)
+- [Database Schema](../supabase/schema_documentation.md)
+- [API Reference](../web/docs/api-reference.md)
+- [Deployment Guide](../DEPLOYMENT.md)
+- [Operator Runbook](../web/docs/operator-runbook.md)
+- [Incident Runbooks](../web/docs/incidents.md)
 
 ## What’s Next (Sprint 4)
 
@@ -68,10 +76,10 @@ See prompts in `prompts/sprint4/` (32–45) for task-level detail and acceptance
 
 ## How to Run & Operate
 
-- Setup: follow `web/docs/ENVIRONMENT.md` and `DEPLOYMENT.md`.
-- Jobs & monitoring: `INNGEST_SETUP.md` for health checks, kill switch, DLQ.
+- Setup: follow [Environment Setup](../web/docs/ENVIRONMENT.md) and [Deployment Guide](../DEPLOYMENT.md).
+- Jobs & monitoring: see [Inngest Setup](../INNGEST_SETUP.md) for health checks, kill switch, DLQ.
 - Admin UI: `/admin/*` (RBAC by `ADMIN_EMAILS`).
-- Exports: see API reference for CSV endpoints.
+- Exports: see [API Reference](../web/docs/api-reference.md) for CSV endpoints.
 
 ## Ownership
 
