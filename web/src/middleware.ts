@@ -1,23 +1,9 @@
-import { NextRequest, NextResponse } from "next/server";
+import { createServerClient } from "@supabase/ssr";
+import { type NextRequest, NextResponse } from "next/server";
 import {
   applySecurityHeaders,
   buildSecurityHeaders,
 } from "./lib/security/headers";
-
-export function middleware(req: NextRequest) {
-  const res = NextResponse.next();
-  const headers = buildSecurityHeaders(req);
-  return applySecurityHeaders(res, headers);
-}
-
-export const config = {
-  matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|assets).*)",
-  ],
-};
-
-import { createServerClient } from "@supabase/ssr";
-import { type NextRequest, NextResponse } from "next/server";
 
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({
@@ -57,6 +43,11 @@ export async function middleware(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
 
+  // Prepare security headers helper
+  const securityHeaders = buildSecurityHeaders(request);
+  const withHeaders = (res: NextResponse) =>
+    applySecurityHeaders(res, securityHeaders);
+
   // Define route patterns
   const isAuthPage = pathname.startsWith("/auth");
   const isPublicPage = pathname === "/" || pathname.startsWith("/public");
@@ -68,14 +59,14 @@ export async function middleware(request: NextRequest) {
     // Redirect unauthenticated users to login page
     const redirectUrl = new URL("/auth/login", request.url);
     redirectUrl.searchParams.set("redirectTo", pathname);
-    return NextResponse.redirect(redirectUrl);
+    return withHeaders(NextResponse.redirect(redirectUrl));
   }
 
   if (user && isAuthPage) {
     // Redirect authenticated users away from auth pages
     const redirectTo = request.nextUrl.searchParams.get("redirectTo");
     const redirectUrl = new URL(redirectTo || "/dashboard", request.url);
-    return NextResponse.redirect(redirectUrl);
+    return withHeaders(NextResponse.redirect(redirectUrl));
   }
 
   // Handle API routes that require authentication
@@ -93,14 +84,15 @@ export async function middleware(request: NextRequest) {
     );
 
     if (requiresAuth && !user) {
-      return NextResponse.json(
+      const unauthorized = NextResponse.json(
         { error: "Authentication required" },
         { status: 401 }
       );
+      return withHeaders(unauthorized);
     }
   }
 
-  return response;
+  return withHeaders(response);
 }
 
 export const config = {
