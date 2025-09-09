@@ -151,7 +151,7 @@ async function handleDomainGet(
       p_domain_id: id,
       p_start_date: thirtyDaysAgo.toISOString(),
       p_end_date: new Date().toISOString(),
-    }
+    } as unknown as never
   );
 
   // If the RPC doesn't exist, we'll create a fallback query
