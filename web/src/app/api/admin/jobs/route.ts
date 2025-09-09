@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { InngestAdmin } from "@/lib/inngest-admin";
 import { getGlobalMcpBreaker } from "@/lib/mcp/circuitBreaker";
 import { withAdminGuard, auditAdminAction } from "@/lib/security/admin";
+import { createClient } from "@/lib/supabase/server";
 
 // GET /api/admin/jobs - Get job status and metrics
 export const GET = withAdminGuard(async (request: NextRequest) => {
@@ -17,12 +18,22 @@ export const GET = withAdminGuard(async (request: NextRequest) => {
       activeJobs,
       recentLogs,
       mcpCircuitBreaker,
+      backfillCheckpoint,
     ] = await Promise.all([
       InngestAdmin.getSystemHealth(),
       InngestAdmin.getJobMetrics(jobType || undefined, hoursBack),
       InngestAdmin.getActiveJobs(),
       InngestAdmin.getRecentLogs(20),
       getGlobalMcpBreaker().getStatus(),
+      (async () => {
+        const supabase = await createClient();
+        const { data } = await supabase
+          .from("system_config")
+          .select("value, updated_at")
+          .eq("key", "discovery_backfill_checkpoint")
+          .maybeSingle<{ value: unknown; updated_at: string }>();
+        return data ?? null;
+      })(),
     ]);
 
     return NextResponse.json({
@@ -33,6 +44,7 @@ export const GET = withAdminGuard(async (request: NextRequest) => {
         activeJobs,
         recentLogs,
         mcpCircuitBreaker,
+        backfillCheckpoint,
       },
     });
   } catch (error) {
