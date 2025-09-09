@@ -64,6 +64,10 @@ WORKER_API_KEY=your_worker_api_key
 SLACK_ALERTS_ENABLED=true
 SLACK_WEBHOOK_URL=https://hooks.slack.com/services/xxx/yyy/zzzz
 ALERTS_DRY_RUN=false
+
+# Admin Security (RBAC & Origins)
+ADMIN_EMAILS=admin1@example.com,admin2@example.com
+ADMIN_ALLOWED_ORIGINS=https://yourdomain.com,https://staging.yourdomain.com
 ```
 
 ### Environment Validation

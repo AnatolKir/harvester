@@ -100,6 +100,10 @@ DISCOVERY_JOB_TIMEOUT_MINUTES=30
 HARVESTING_JOB_TIMEOUT_MINUTES=60
 # HTTP Enrichment
 HTTP_ENRICH_RPM=30
+
+# Admin Security
+ADMIN_EMAILS=admin1@example.com,admin2@example.com
+ADMIN_ALLOWED_ORIGINS=https://yourdomain.com,https://staging.yourdomain.com
 ```
 
 ### 4. Inngest Cloud Setup
