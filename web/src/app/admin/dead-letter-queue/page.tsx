@@ -44,7 +44,7 @@ type DlqItem = {
 };
 
 type PageProps = {
-  searchParams?: { [key: string]: string | string[] | undefined };
+  searchParams?: Promise<{ [key: string]: string | string[] | undefined }>;
 };
 
 async function getUserEmail() {
@@ -86,9 +86,9 @@ function summarizePayload(payload: unknown): string {
 
 export default async function DeadLetterQueuePage({ searchParams }: PageProps) {
   const requesterEmail = await getUserEmail();
-  const status =
-    typeof searchParams?.status === "string" ? searchParams?.status : "all";
-  const page = Number(searchParams?.page ?? 1) || 1;
+  const sp = (await searchParams) || {};
+  const status = typeof sp.status === "string" ? sp.status : "all";
+  const page = Number(sp.page ?? 1) || 1;
   const pageSize = 20;
 
   const items = await getDlq(status);
