@@ -56,19 +56,18 @@ type DomainMeta = {
 export async function generateMetadata({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }): Promise<Metadata> {
+  const { id } = await params;
   const supabase = await createClient();
   const isUuid =
     /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
-      params.id
+      id
     );
   const query = supabase.from("domain").select("domain").limit(1);
   const { data } = isUuid
-    ? await query.eq("id", params.id).maybeSingle<{ domain: string | null }>()
-    : await query
-        .eq("domain", params.id)
-        .maybeSingle<{ domain: string | null }>();
+    ? await query.eq("id", id).maybeSingle<{ domain: string | null }>()
+    : await query.eq("domain", id).maybeSingle<{ domain: string | null }>();
 
   const domain = data?.domain ?? "Domain";
   return {
@@ -220,20 +219,21 @@ async function getData(domainId: string) {
 export default async function DomainDetailPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
+  const { id } = await params;
   const supabase = await createClient();
 
   const isUuid =
     /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
-      params.id
+      id
     );
-  let effectiveId = params.id;
+  let effectiveId = id;
   if (!isUuid) {
     const { data } = await supabase
       .from("domain")
       .select("id")
-      .eq("domain", params.id)
+      .eq("domain", id)
       .maybeSingle<{ id: string | null }>();
     if (!data?.id) {
       notFound();
