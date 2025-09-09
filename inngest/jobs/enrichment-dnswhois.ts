@@ -136,6 +136,9 @@ export const dnsWhoisEnrichmentJob = inngest.createFunction(
       return { success: false, error: 'Kill switch is active' } as JobResult;
     }
 
+    const whoisUrl = process.env.WHOIS_API_URL;
+    const whoisKey = process.env.WHOIS_API_KEY;
+
     const candidates = await step.run('select-candidates', async () => {
       const { data, error } = await supabase
         .from('domain')
@@ -147,7 +150,8 @@ export const dnsWhoisEnrichmentJob = inngest.createFunction(
       const out = (data || []).filter((d: any) => {
         const md = d?.metadata || {};
         const hasDns = Boolean(md.dns && md.dns.checked_at);
-        const hasWhois = Boolean(md.whois && md.whois.checked_at);
+        // If WHOIS is not configured, treat as satisfied to avoid repeated selection
+        const hasWhois = whoisUrl ? Boolean(md.whois && md.whois.checked_at) : true;
         return !hasDns || !hasWhois;
       });
       return out.slice(0, 60);
@@ -155,9 +159,6 @@ export const dnsWhoisEnrichmentJob = inngest.createFunction(
 
     let processed = 0;
     let updated = 0;
-
-    const whoisUrl = process.env.WHOIS_API_URL;
-    const whoisKey = process.env.WHOIS_API_KEY;
 
     for (const d of candidates) {
       if (processed >= 60) break;
@@ -167,26 +168,40 @@ export const dnsWhoisEnrichmentJob = inngest.createFunction(
 
         const domainName: string = d.domain;
 
-        // DNS
-        const dnsMeta = await resolveDnsRecords(domainName);
+        const md = (d.metadata || {}) as { dns?: DnsMeta; whois?: WhoisMeta };
+        const needDns = !(md.dns && md.dns.checked_at);
+        const needWhois = Boolean(whoisUrl) && !(md.whois && md.whois.checked_at);
 
-        // WHOIS (optional)
-        const whoisMeta = await fetchWhois(domainName, whoisUrl, whoisKey);
+        let dnsMeta: DnsMeta | undefined = md.dns;
+        let whoisMeta: WhoisMeta | null | undefined = md.whois;
+
+        if (needDns) {
+          dnsMeta = await resolveDnsRecords(domainName);
+        }
+        if (needWhois) {
+          whoisMeta = await fetchWhois(domainName, whoisUrl, whoisKey);
+        }
+
+        // Build minimal update: only write fields we fetched
+        const newMetadata: any = { ...(d.metadata || {}) };
+        if (needDns && dnsMeta) newMetadata.dns = dnsMeta;
+        if (needWhois && whoisMeta) newMetadata.whois = whoisMeta;
+
+        // If nothing to update (shouldn't happen due to selection), skip
+        if (!needDns && !needWhois) {
+          processed++;
+          return;
+        }
 
         const hasResolvableDns = Boolean(
-          (dnsMeta.a && dnsMeta.a.length > 0) ||
-            (dnsMeta.aaaa && dnsMeta.aaaa.length > 0) ||
-            (dnsMeta.cname && dnsMeta.cname.length > 0)
+          dnsMeta &&
+            ((dnsMeta.a && dnsMeta.a.length > 0) ||
+              (dnsMeta.aaaa && dnsMeta.aaaa.length > 0) ||
+              (dnsMeta.cname && dnsMeta.cname.length > 0))
         );
 
-        const updatePayload: any = {
-          metadata: {
-            ...(d.metadata || {}),
-            dns: dnsMeta,
-            ...(whoisMeta ? { whois: whoisMeta } : {}),
-          },
-        };
-        if (hasResolvableDns) {
+        const updatePayload: any = { metadata: newMetadata };
+        if (needDns && hasResolvableDns && dnsMeta) {
           updatePayload.verified_at = dnsMeta.checked_at;
         }
 
