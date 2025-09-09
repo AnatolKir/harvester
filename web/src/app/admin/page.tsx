@@ -45,6 +45,15 @@ export default async function AdminPage() {
   await createClient();
   const snapshot = await getAdminSnapshot();
 
+  // Coerce unknowns from snapshot to safe primitives for rendering
+  const sys = (snapshot.systemHealth || {}) as Record<string, unknown>;
+  const killSwitchActive = Boolean(sys["kill_switch_active"]);
+  const jobs24h = Number((sys["total_jobs_24h"] as number | undefined) ?? 0);
+  const completed24h = Number(
+    (sys["completed_jobs_24h"] as number | undefined) ?? 0
+  );
+  const failed24h = Number((sys["failed_jobs_24h"] as number | undefined) ?? 0);
+
   return (
     <div className="space-y-8">
       <div>
@@ -60,15 +69,10 @@ export default async function AdminPage() {
             <CardTitle>System Health</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
-            <div>
-              Kill Switch:{" "}
-              {String(snapshot.systemHealth?.kill_switch_active ?? false)}
-            </div>
-            <div>Jobs 24h: {snapshot.systemHealth?.total_jobs_24h ?? 0}</div>
-            <div>
-              Completed 24h: {snapshot.systemHealth?.completed_jobs_24h ?? 0}
-            </div>
-            <div>Failed 24h: {snapshot.systemHealth?.failed_jobs_24h ?? 0}</div>
+            <div>Kill Switch: {String(killSwitchActive)}</div>
+            <div>Jobs 24h: {jobs24h}</div>
+            <div>Completed 24h: {completed24h}</div>
+            <div>Failed 24h: {failed24h}</div>
           </CardContent>
         </Card>
 
@@ -121,33 +125,33 @@ export default async function AdminPage() {
               </Button>
             </form>
             {/* CSV Exports */}
-            <a
-              href={`${process.env.NEXT_PUBLIC_BASE_URL || ""}/api/domains/export?dateFilter=all`}
-              target="_blank"
-              rel="noreferrer"
-            >
-              <Button asChild size="sm" variant="outline">
-                <span>Export Domains CSV (All)</span>
-              </Button>
-            </a>
-            <a
-              href={`${process.env.NEXT_PUBLIC_BASE_URL || ""}/api/domains/export?dateFilter=week`}
-              target="_blank"
-              rel="noreferrer"
-            >
-              <Button asChild size="sm" variant="outline">
-                <span>Export Domains CSV (Week)</span>
-              </Button>
-            </a>
-            <a
-              href={`${process.env.NEXT_PUBLIC_BASE_URL || ""}/api/domains/export?dateFilter=today`}
-              target="_blank"
-              rel="noreferrer"
-            >
-              <Button asChild size="sm" variant="outline">
-                <span>Export Domains CSV (Today)</span>
-              </Button>
-            </a>
+            <Button asChild size="sm" variant="outline">
+              <a
+                href={`${process.env.NEXT_PUBLIC_BASE_URL || ""}/api/domains/export?dateFilter=all`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Export Domains CSV (All)
+              </a>
+            </Button>
+            <Button asChild size="sm" variant="outline">
+              <a
+                href={`${process.env.NEXT_PUBLIC_BASE_URL || ""}/api/domains/export?dateFilter=week`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Export Domains CSV (Week)
+              </a>
+            </Button>
+            <Button asChild size="sm" variant="outline">
+              <a
+                href={`${process.env.NEXT_PUBLIC_BASE_URL || ""}/api/domains/export?dateFilter=today`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Export Domains CSV (Today)
+              </a>
+            </Button>
           </CardContent>
         </Card>
 
