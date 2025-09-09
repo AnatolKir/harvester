@@ -1,5 +1,5 @@
 import { serve } from "inngest/next";
-import { inngest, allJobs } from "../../../inngest";
+import { inngest, allJobs } from "../../../../inngest";
 
 // Create the Inngest API route handler
 export const { GET, POST, PUT } = serve({
