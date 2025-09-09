@@ -7,7 +7,7 @@ import {
   triggerHealthCheck,
   triggerMaintenanceCleanup,
   triggerDiscoveryBackfill,
-} from "../../../inngest";
+} from "../../inngest";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
