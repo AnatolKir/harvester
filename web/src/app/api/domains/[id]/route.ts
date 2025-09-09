@@ -169,7 +169,8 @@ async function handleDomainGet(
       .select("created_at")
       .eq("domain_id", id)
       .gte("created_at", thirtyDaysAgo.toISOString())
-      .order("created_at", { ascending: true });
+      .order("created_at", { ascending: true })
+      .returns<{ created_at: string }[]>();
 
     if (!fallbackError && fallbackData) {
       // Group by date
