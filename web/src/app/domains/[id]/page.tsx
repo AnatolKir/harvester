@@ -64,12 +64,31 @@ export async function generateMetadata({
     /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
       id
     );
-  const query = supabase.from("domain").select("domain").limit(1);
-  const { data } = isUuid
-    ? await query.eq("id", id).maybeSingle<{ domain: string | null }>()
-    : await query.eq("domain", id).maybeSingle<{ domain: string | null }>();
-
-  const domain = data?.domain ?? "Domain";
+  let domain = "Domain";
+  if (isUuid) {
+    const { data } = await supabase
+      .from("domain")
+      .select("domain, domain_name")
+      .eq("id", id)
+      .maybeSingle<{ domain: string | null; domain_name: string | null }>();
+    domain = (data?.domain || data?.domain_name || "Domain") as string;
+  } else {
+    const { data: d1 } = await supabase
+      .from("domain")
+      .select("domain")
+      .eq("domain", id)
+      .maybeSingle<{ domain: string | null }>();
+    if (d1?.domain) {
+      domain = d1.domain;
+    } else {
+      const { data: d2 } = await supabase
+        .from("domain")
+        .select("domain_name")
+        .eq("domain_name", id)
+        .maybeSingle<{ domain_name: string | null }>();
+      domain = (d2?.domain_name || id) as string;
+    }
+  }
   return {
     title: `${domain} • Domain Details`,
     description: `Mentions, related videos, and activity for ${domain}.`,
@@ -83,12 +102,13 @@ async function getData(domainId: string) {
   const { data: base, error: baseErr } = await supabase
     .from("domain")
     .select(
-      "id, domain, first_seen, last_seen, total_mentions, unique_videos, unique_author_count, is_suspicious"
+      "id, domain, domain_name, first_seen, last_seen, total_mentions, unique_videos, unique_author_count, is_suspicious"
     )
     .eq("id", domainId)
     .maybeSingle<{
       id: string;
-      domain: string;
+      domain: string | null;
+      domain_name: string | null;
       first_seen: string | null;
       last_seen: string | null;
       total_mentions: number | null;
@@ -115,7 +135,7 @@ async function getData(domainId: string) {
 
   const details: DomainDetailsRow = {
     domain_id: base.id,
-    domain: base.domain,
+    domain: (base.domain || base.domain_name) as string | null,
     first_seen: base.first_seen,
     last_seen: base.last_seen,
     total_mentions: base.total_mentions ?? 0,
@@ -230,15 +250,26 @@ export default async function DomainDetailPage({
     );
   let effectiveId = id;
   if (!isUuid) {
-    const { data } = await supabase
+    // Try domain then domain_name
+    const { data: d1 } = await supabase
       .from("domain")
       .select("id")
       .eq("domain", id)
       .maybeSingle<{ id: string | null }>();
-    if (!data?.id) {
-      notFound();
+    if (d1?.id) {
+      effectiveId = d1.id as string;
+    } else {
+      const { data: d2 } = await supabase
+        .from("domain")
+        .select("id")
+        .eq("domain_name", id)
+        .maybeSingle<{ id: string | null }>();
+      if (d2?.id) {
+        effectiveId = d2.id as string;
+      } else {
+        notFound();
+      }
     }
-    effectiveId = data.id as string;
   }
 
   const {
