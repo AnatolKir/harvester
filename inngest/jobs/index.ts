@@ -6,6 +6,7 @@ export { discoveryBackfillJob } from './discovery-backfill';
 export { commentHarvestingJob, domainExtractionJob } from './harvesting';
 export { httpEnrichmentJob } from './enrichment-http';
 export { dnsWhoisEnrichmentJob } from './enrichment-dnswhois';
+export { materializedViewsRefreshJob } from './mv-refresh';
 
 export {
   killSwitchJob,
@@ -24,6 +25,7 @@ import { discoveryBackfillJob } from './discovery-backfill';
 import { commentHarvestingJob, domainExtractionJob } from './harvesting';
 import { httpEnrichmentJob } from './enrichment-http';
 import { dnsWhoisEnrichmentJob } from './enrichment-dnswhois';
+import { materializedViewsRefreshJob } from './mv-refresh';
 
 import {
   killSwitchJob,
@@ -45,6 +47,7 @@ export const allJobs = [
   domainExtractionJob,
   httpEnrichmentJob,
   dnsWhoisEnrichmentJob,
+  materializedViewsRefreshJob,
 
   // System jobs
   killSwitchJob,
