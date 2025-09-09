@@ -169,6 +169,13 @@ ADMIN_ALLOWED_ORIGINS=https://yourdomain.com,https://staging.yourdomain.com
 - **Purpose**: Clean up old data and logs
 - **Default**: Keep 90 days of data
 
+**Materialized Views Refresh** (`materialized-views-refresh`)
+
+- **Schedule**: Every 5 minutes
+- **Purpose**: Calls Postgres function `refresh_matviews()` to update matviews used by UI when enabled
+- **Guard**: Skips automatically when `MATVIEWS_ENABLED=false`
+- **Notes**: Falls back to normal SQL views if disabled or if matviews are missing
+
 ### Enrichment Jobs
 
 **Domain HTTP Enrichment** (`domain/http.enrich.scheduled`)
@@ -199,6 +206,20 @@ WHOIS_API_KEY=your_api_key_here
 ```
 
 These are optional. When unset, WHOIS lookups are skipped and only DNS is stored.
+
+## Resilience: MCP Circuit Breaker
+
+- Location: `web/src/lib/mcp/circuitBreaker.ts` (shared in jobs and admin API)
+- States: `closed` (normal), `open` (fast-fail), `half-open` (probe)
+- Configuration (env in `web/.env.local` or platform vars):
+
+```bash
+MCP_CB_FAILURE_THRESHOLD=5   # failures before opening breaker
+MCP_CB_COOLDOWN_MS=60000     # cooldown before half-open probe
+```
+
+- Surfaced via Admin Jobs API (`GET /api/admin/jobs`) as `mcpCircuitBreaker`.
+- Jobs short-circuit when breaker is open and automatically recover upon success during half-open.
 
 ## Admin API Endpoints
 

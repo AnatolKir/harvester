@@ -149,15 +149,25 @@ Admin-only operational features are available in the dashboard. RBAC is enforced
 - Jobs & Health: `/admin/jobs` — Success rate, last successful run, DLQ size, in-progress jobs; charts and recent executions.
 - Dead Letter Queue: `/admin/dead-letter-queue` — Inspect failed jobs; Retry/Delete with confirmation and audit logging.
 - System Logs: `/admin/logs` — Filter by level, job type, timeframe, correlation ID, and event type.
+- Alerts: `/admin/alerts` — Toggle alerts and tune thresholds (success rate %, max discovery/harvest gaps, DLQ size).
+- Exports: `/admin/exports` — Download CSV exports for Domains and Domain Mentions.
 
 ### Alerts & Thresholds
 
-- Alerts trigger when:
-  - Kill switch is active
-  - No successful discovery in 30+ minutes
-  - No successful harvesting in 60+ minutes
-  - Job success rate < 70%
-  - DLQ size ≥ 10
+- Manage in `/admin/alerts`. Defaults can be tuned via UI and stored in `system_config`:
+  - Alerts Enabled
+  - Success rate minimum (%)
+  - Discovery gap (minutes)
+  - Harvest gap (minutes)
+  - DLQ threshold (items)
+
+Indicative triggers:
+
+- Kill switch is active
+- No successful discovery in 30+ minutes (default)
+- No successful harvesting in 60+ minutes (default)
+- Job success rate < 70% (default)
+- DLQ size ≥ 10 (default)
 
 ### Backfill (Discovery)
 
@@ -173,6 +183,19 @@ Notes:
 
 - Respects global token bucket (`DISCOVERY_RPM`).
 - Idempotent upserts on `video(video_id)`; resumes from checkpoint on restart.
+
+### Circuit Breaker (MCP)
+
+- Status surfaces on `/admin/jobs` response as `mcpCircuitBreaker`.
+- Env tuning:
+  - `MCP_CB_FAILURE_THRESHOLD` (default 5)
+  - `MCP_CB_COOLDOWN_MS` (default 60000)
+- States: `closed` → `open` (after failures) → `half-open` (probe) → `closed` on success.
+
+### Materialized Views (Performance)
+
+- Toggle: `MATVIEWS_ENABLED=true|false` (default false). When false, API uses normal SQL views.
+- Refresh job: Inngest `materialized-views-refresh` (cron ~5 min) calls `refresh_matviews()`.
 
 ### Runbooks
 
