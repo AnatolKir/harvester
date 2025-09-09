@@ -3,7 +3,6 @@ import { createClient } from "@/lib/supabase/server";
 import { DomainIdSchema } from "@/lib/validations";
 import {
   createSuccessResponse,
-  createErrorResponse,
   withErrorHandling,
   addRateLimitHeaders,
 } from "@/lib/api";
@@ -11,8 +10,6 @@ import type { Database } from "@/types/database";
 
 type Domain = Database["public"]["Tables"]["domain"]["Row"];
 type DomainMention = Database["public"]["Tables"]["domain_mention"]["Row"];
-type Comment = Database["public"]["Tables"]["comment"]["Row"];
-type Video = Database["public"]["Tables"]["video"]["Row"];
 
 /**
  * @swagger
@@ -97,10 +94,11 @@ interface DomainDetails extends Domain {
 
 async function handleDomainGet(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   // Validate the domain ID parameter
-  const { id } = DomainIdSchema.parse({ id: params.id });
+  const { id: rawId } = await params;
+  const { id } = DomainIdSchema.parse({ id: rawId });
 
   const supabase = await createClient();
 
@@ -125,7 +123,10 @@ async function handleDomainGet(
     .select("id, domain, video_id, comment_id, created_at")
     .eq("domain", domain.domain)
     .order("created_at", { ascending: false })
-    .limit(20);
+    .limit(20)
+    .returns<
+      Pick<DomainMention, "id" | "video_id" | "comment_id" | "created_at">[]
+    >();
 
   if (mentionsError) {
     console.error("Mentions query error:", mentionsError);
@@ -185,7 +186,7 @@ async function handleDomainGet(
   const domainDetails: DomainDetails = {
     ...domain,
     recent_mentions:
-      mentions?.map((m: any) => ({
+      (mentions || []).map((m) => ({
         id: m.id,
         created_at: m.created_at,
         video_id: m.video_id,
