@@ -5,6 +5,7 @@ import { MCPClient } from '../../web/src/lib/mcp/client';
 import { acquireCommentsToken } from '../../web/src/lib/rate-limit/buckets';
 import { fetchCommentsForVideo } from '../../web/src/lib/mcp/comments';
 import { alertJobError } from '../../web/src/lib/alerts';
+import { extractDomains, dedupeNormalized } from '../../web/src/lib/extract/domain';
 import { generateCorrelationId } from '../utils';
 
 const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
@@ -336,30 +337,17 @@ export const domainExtractionJob = inngest.createFunction(
     });
 
     try {
-      // Step 1: Extract domains from comment text
+      // Step 1: Extract + normalize domains from comment text
       const domains = await step.run('extract-domains', async () => {
-        // Domain extraction regex (basic implementation)
-        const domainRegex =
-          /(?:https?:\/\/)?(?:www\.)?([a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}/g;
-        const matches = commentText.match(domainRegex);
-
-        if (!matches) return [];
-
-        return matches.map((match: string) => {
-          // Clean up the domain
-          let domain = match.replace(/^https?:\/\//, '').replace(/^www\./, '');
-          // Remove trailing slash and path
-          domain = domain.split('/')[0];
-
-          const parts = domain.split('.');
-          return {
-            fullDomain: domain,
-            tld: parts[parts.length - 1],
-            subdomain: parts.length > 2 ? parts.slice(0, -2).join('.') : null,
-            domainName: parts.length > 1 ? parts.slice(-2).join('.') : domain,
-            originalText: match,
-          };
-        });
+        const raw = extractDomains(commentText);
+        const normalized = dedupeNormalized(raw);
+        return normalized.map((n) => ({
+          fullDomain: n.domainName,
+          tld: n.tld,
+          subdomain: n.subdomain,
+          domainName: n.domainName,
+          originalText: n.domainName,
+        }));
       });
 
       if (domains.length === 0) {
