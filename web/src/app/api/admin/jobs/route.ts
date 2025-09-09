@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { InngestAdmin } from "@/lib/inngest-admin";
+import { getGlobalMcpBreaker } from "@/lib/mcp/circuitBreaker";
 import { withAdminGuard, auditAdminAction } from "@/lib/security/admin";
 
 // GET /api/admin/jobs - Get job status and metrics
@@ -10,13 +11,19 @@ export const GET = withAdminGuard(async (request: NextRequest) => {
     const jobType = url.searchParams.get("type");
     const hoursBack = parseInt(url.searchParams.get("hours") || "24");
 
-    const [systemHealth, jobMetrics, activeJobs, recentLogs] =
-      await Promise.all([
-        InngestAdmin.getSystemHealth(),
-        InngestAdmin.getJobMetrics(jobType || undefined, hoursBack),
-        InngestAdmin.getActiveJobs(),
-        InngestAdmin.getRecentLogs(20),
-      ]);
+    const [
+      systemHealth,
+      jobMetrics,
+      activeJobs,
+      recentLogs,
+      mcpCircuitBreaker,
+    ] = await Promise.all([
+      InngestAdmin.getSystemHealth(),
+      InngestAdmin.getJobMetrics(jobType || undefined, hoursBack),
+      InngestAdmin.getActiveJobs(),
+      InngestAdmin.getRecentLogs(20),
+      getGlobalMcpBreaker().getStatus(),
+    ]);
 
     return NextResponse.json({
       success: true,
@@ -25,6 +32,7 @@ export const GET = withAdminGuard(async (request: NextRequest) => {
         jobMetrics,
         activeJobs,
         recentLogs,
+        mcpCircuitBreaker,
       },
     });
   } catch (error) {

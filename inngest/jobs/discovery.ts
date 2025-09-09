@@ -4,6 +4,7 @@ import { createClient } from '@supabase/supabase-js';
 import { MCPClient } from '../../web/src/lib/mcp/client';
 import { acquireDiscoveryToken } from '../../web/src/lib/rate-limit/buckets';
 import { fetchPromotedVideoIds } from '../../web/src/lib/mcp/discovery';
+import { getGlobalMcpBreaker } from '../../web/src/lib/mcp/circuitBreaker';
 import { alertJobError } from '../../web/src/lib/alerts';
 import { generateCorrelationId } from '../utils';
 
@@ -92,17 +93,27 @@ export const videoDiscoveryJob = inngest.createFunction(
         // eslint-disable-next-line no-constant-condition
         while (true) {
           try {
+            const breaker = getGlobalMcpBreaker();
+            const allowed = await breaker.canProceed();
+            if (!allowed) {
+              logger.warn('circuit_open_fast_fail', { correlationId });
+              throw new Error('MCP circuit open');
+            }
             const res = await fetchPromotedVideoIds(mcp, {
               region: 'US',
               windowHours: 6,
               pageSize: limit,
             });
             items = res;
+            await breaker.onSuccess();
             break;
           } catch (err: any) {
             const status = err?.status;
             const bodySnippet = err?.bodySnippet;
             const isTransient = err?.isTransient === true;
+            try {
+              await getGlobalMcpBreaker().onFailure();
+            } catch {}
             logger.warn('mcp_discovery_failed', {
               status,
               isTransient,

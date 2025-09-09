@@ -36,6 +36,9 @@ const envSchema = z.object({
   WHOIS_API_URL: z.string().url().optional(),
   WHOIS_API_KEY: z.string().optional(),
   MATVIEWS_ENABLED: z.coerce.boolean().default(false),
+  // MCP Circuit Breaker
+  MCP_CB_FAILURE_THRESHOLD: z.coerce.number().int().default(5),
+  MCP_CB_COOLDOWN_MS: z.coerce.number().int().default(60000),
 
   // Legacy (deprecated) Playwright proxy vars (kept for backward compatibility)
   PROXY_URL: z.string().optional(),
@@ -79,6 +82,8 @@ function validateEnv(): Env {
     WHOIS_API_URL: process.env.WHOIS_API_URL,
     WHOIS_API_KEY: process.env.WHOIS_API_KEY,
     MATVIEWS_ENABLED: process.env.MATVIEWS_ENABLED,
+    MCP_CB_FAILURE_THRESHOLD: process.env.MCP_CB_FAILURE_THRESHOLD,
+    MCP_CB_COOLDOWN_MS: process.env.MCP_CB_COOLDOWN_MS,
 
     PROXY_URL: process.env.PROXY_URL,
     PROXY_USERNAME: process.env.PROXY_USERNAME,
@@ -128,6 +133,8 @@ export function getServerEnv() {
     WHOIS_API_URL: env.WHOIS_API_URL,
     WHOIS_API_KEY: env.WHOIS_API_KEY,
     MATVIEWS_ENABLED: env.MATVIEWS_ENABLED,
+    MCP_CB_FAILURE_THRESHOLD: env.MCP_CB_FAILURE_THRESHOLD,
+    MCP_CB_COOLDOWN_MS: env.MCP_CB_COOLDOWN_MS,
 
     // Legacy proxy vars (deprecated)
     PROXY_URL: env.PROXY_URL,

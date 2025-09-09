@@ -4,6 +4,7 @@ import { createClient } from '@supabase/supabase-js';
 import { MCPClient } from '../../web/src/lib/mcp/client';
 import { acquireCommentsToken } from '../../web/src/lib/rate-limit/buckets';
 import { fetchCommentsForVideo } from '../../web/src/lib/mcp/comments';
+import { getGlobalMcpBreaker } from '../../web/src/lib/mcp/circuitBreaker';
 import { alertJobError } from '../../web/src/lib/alerts';
 import { extractDomains, dedupeNormalized } from '../../web/src/lib/extract/domain';
 import { generateCorrelationId } from '../utils';
@@ -108,13 +109,23 @@ export const commentHarvestingJob = inngest.createFunction(
         // eslint-disable-next-line no-constant-condition
         while (true) {
           try {
+            const breaker = getGlobalMcpBreaker();
+            const allowed = await breaker.canProceed();
+            if (!allowed) {
+              logger.warn('circuit_open_fast_fail', { correlationId });
+              throw new Error('MCP circuit open');
+            }
             const res = await fetchCommentsForVideo(mcp, videoId, { maxPages });
             comments = res;
+            await breaker.onSuccess();
             break;
           } catch (err: any) {
             const status = err?.status;
             const bodySnippet = err?.bodySnippet;
             const isTransient = err?.isTransient === true;
+            try {
+              await getGlobalMcpBreaker().onFailure();
+            } catch {}
             logger.warn('mcp_comments_failed', {
               status,
               isTransient,
