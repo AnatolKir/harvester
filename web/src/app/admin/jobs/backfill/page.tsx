@@ -1,5 +1,6 @@
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
+import Link from "next/link";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -70,6 +71,11 @@ export default async function BackfillControlsPage() {
         <p className="text-muted-foreground">
           Trigger and monitor discovery backfill.
         </p>
+        <div className="mt-2">
+          <Link href="/admin" className="text-sm underline">
+            ← Back to Admin
+          </Link>
+        </div>
       </div>
 
       <Card>
