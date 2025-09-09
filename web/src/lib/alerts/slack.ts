@@ -46,6 +46,44 @@ function defaultTitleFor(type: SlackAlertType): string {
   }
 }
 
+import { createClient } from "@supabase/supabase-js";
+
+let alertsEnabledCache: { value: boolean; fetchedAt: number } | null = null;
+const ALERTS_CACHE_TTL_MS = 60_000; // 1 minute
+
+async function getAlertsEnabled(): Promise<boolean> {
+  const now = Date.now();
+  if (
+    alertsEnabledCache &&
+    now - alertsEnabledCache.fetchedAt < ALERTS_CACHE_TTL_MS
+  ) {
+    return alertsEnabledCache.value;
+  }
+
+  const envFallback = process.env.SLACK_ALERTS_ENABLED === "true";
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) {
+    alertsEnabledCache = { value: envFallback, fetchedAt: now };
+    return envFallback;
+  }
+
+  try {
+    const supabase = createClient(url, key);
+    const { data } = await supabase
+      .from("system_config")
+      .select("value")
+      .eq("key", "alerts_enabled")
+      .maybeSingle();
+    const enabled = (data?.value as boolean | undefined) ?? envFallback;
+    alertsEnabledCache = { value: enabled, fetchedAt: now };
+    return enabled;
+  } catch {
+    alertsEnabledCache = { value: envFallback, fetchedAt: now };
+    return envFallback;
+  }
+}
+
 export async function sendSlackAlert(
   type: SlackAlertType,
   payload: SlackAlertPayload,
@@ -57,7 +95,7 @@ export async function sendSlackAlert(
   reason?: string;
 }> {
   const webhookUrl = process.env.SLACK_WEBHOOK_URL;
-  const alertsEnabled = process.env.SLACK_ALERTS_ENABLED === "true";
+  const alertsEnabled = await getAlertsEnabled();
   const dryRun = process.env.ALERTS_DRY_RUN === "true";
 
   if (!alertsEnabled) return { delivered: false, reason: "disabled" };
