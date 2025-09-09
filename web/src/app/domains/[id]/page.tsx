@@ -68,25 +68,39 @@ export async function generateMetadata({
   if (isUuid) {
     const { data } = await supabase
       .from("domain")
-      .select("domain, domain_name")
+      .select("*")
       .eq("id", id)
-      .maybeSingle<{ domain: string | null; domain_name: string | null }>();
-    domain = (data?.domain || data?.domain_name || "Domain") as string;
+      .maybeSingle<Record<string, unknown>>();
+    if (data) {
+      const d = data as Record<string, unknown>;
+      domain = ((d["domain"] as string) ||
+        (d["domain_name"] as string) ||
+        "Domain") as string;
+    }
   } else {
-    const { data: d1 } = await supabase
+    // Try domain → domain_name
+    let found: Record<string, unknown> | null = null;
+    let res = await supabase
       .from("domain")
-      .select("domain")
+      .select("*")
       .eq("domain", id)
-      .maybeSingle<{ domain: string | null }>();
-    if (d1?.domain) {
-      domain = d1.domain;
-    } else {
-      const { data: d2 } = await supabase
+      .maybeSingle<Record<string, unknown>>();
+    if (res.data) found = res.data;
+    if (!found) {
+      res = await supabase
         .from("domain")
-        .select("domain_name")
+        .select("*")
         .eq("domain_name", id)
-        .maybeSingle<{ domain_name: string | null }>();
-      domain = (d2?.domain_name || id) as string;
+        .maybeSingle<Record<string, unknown>>();
+      if (res.data) found = res.data;
+    }
+    if (found) {
+      const f = found as Record<string, unknown>;
+      domain = ((f["domain"] as string) ||
+        (f["domain_name"] as string) ||
+        id) as string;
+    } else {
+      domain = id; // fallback to slug
     }
   }
   return {
@@ -98,24 +112,12 @@ export async function generateMetadata({
 async function getData(domainId: string) {
   const supabase = await createClient();
 
-  // Fallback to base domain row to avoid dependency on views
+  // Schema-agnostic fetch: select all and map fields
   const { data: base, error: baseErr } = await supabase
     .from("domain")
-    .select(
-      "id, domain, domain_name, first_seen, last_seen, total_mentions, unique_videos, unique_author_count, is_suspicious"
-    )
+    .select("*")
     .eq("id", domainId)
-    .maybeSingle<{
-      id: string;
-      domain: string | null;
-      domain_name: string | null;
-      first_seen: string | null;
-      last_seen: string | null;
-      total_mentions: number | null;
-      unique_videos: number | null;
-      unique_author_count: number | null;
-      is_suspicious: boolean | null;
-    }>();
+    .maybeSingle<Record<string, unknown>>();
 
   if (baseErr) {
     throw new Error(`Failed to load domain: ${baseErr.message}`);
@@ -133,17 +135,26 @@ async function getData(domainId: string) {
     };
   }
 
+  const b = base as Record<string, unknown>;
+  const firstSeenVal =
+    ((b["first_seen"] as string) || (b["first_seen_at"] as string)) ?? null;
+  const lastSeenVal =
+    ((b["last_seen"] as string) || (b["last_seen_at"] as string)) ?? null;
   const details: DomainDetailsRow = {
-    domain_id: base.id,
-    domain: (base.domain || base.domain_name) as string | null,
-    first_seen: base.first_seen,
-    last_seen: base.last_seen,
-    total_mentions: base.total_mentions ?? 0,
+    domain_id: (b["id"] as string) || null,
+    domain: ((b["domain"] as string) || (b["domain_name"] as string)) ?? null,
+    first_seen: firstSeenVal,
+    last_seen: lastSeenVal,
+    total_mentions: ((b["total_mentions"] as number) ??
+      (b["mention_count"] as number) ??
+      0) as number,
     video_mentions: null,
     comment_mentions: null,
-    unique_videos: base.unique_videos ?? null,
-    unique_authors: base.unique_author_count ?? null,
-    is_suspicious: base.is_suspicious ?? null,
+    unique_videos: ((b["unique_videos"] as number) ?? null) as number | null,
+    unique_authors: ((b["unique_author_count"] as number) ??
+      (b["unique_authors"] as number) ??
+      null) as number | null,
+    is_suspicious: ((b["is_suspicious"] as boolean) ?? null) as boolean | null,
   };
 
   // Recent mentions for this domain
@@ -251,25 +262,25 @@ export default async function DomainDetailPage({
   let effectiveId = id;
   if (!isUuid) {
     // Try domain then domain_name
-    const { data: d1 } = await supabase
+    let lookedUp: string | null = null;
+    const res1 = await supabase
       .from("domain")
       .select("id")
       .eq("domain", id)
       .maybeSingle<{ id: string | null }>();
-    if (d1?.id) {
-      effectiveId = d1.id as string;
-    } else {
-      const { data: d2 } = await supabase
+    if (res1.data?.id) lookedUp = res1.data.id;
+    if (!lookedUp) {
+      const res2 = await supabase
         .from("domain")
         .select("id")
         .eq("domain_name", id)
         .maybeSingle<{ id: string | null }>();
-      if (d2?.id) {
-        effectiveId = d2.id as string;
-      } else {
-        notFound();
-      }
+      if (res2.data?.id) lookedUp = res2.data.id;
     }
+    if (!lookedUp) {
+      notFound();
+    }
+    effectiveId = lookedUp as string;
   }
 
   const {
