@@ -119,7 +119,7 @@ export const dynamic = "force-dynamic";
 export default async function AdminLogsPage({
   searchParams,
 }: {
-  searchParams?: SearchParams;
+  searchParams?: Promise<SearchParams>;
 }) {
   const supabase = await createClient();
 
@@ -135,14 +135,15 @@ export default async function AdminLogsPage({
     );
   }
 
-  const levelParam = (searchParams?.level || "all") as LogLevel | "all";
-  const jobTypeParam = (searchParams?.jobType || "").trim();
-  const eventParam = (searchParams?.event || "").trim();
-  const hours = Math.max(1, parseInt(searchParams?.hours || "24", 10));
-  const correlationParam = (searchParams?.correlationId || "").trim();
-  const cursorParam = searchParams?.cursor;
+  const sp = (await searchParams) || {};
+  const levelParam = (sp.level || "all") as LogLevel | "all";
+  const jobTypeParam = (sp.jobType || "").trim();
+  const eventParam = (sp.event || "").trim();
+  const hours = Math.max(1, parseInt(sp.hours || "24", 10));
+  const correlationParam = (sp.correlationId || "").trim();
+  const cursorParam = sp.cursor;
   const limit = Math.min(
-    Math.max(parseInt(searchParams?.limit || "50", 10) || 50, 1),
+    Math.max(parseInt(sp.limit || "50", 10) || 50, 1),
     100
   );
 
