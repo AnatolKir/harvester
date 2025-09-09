@@ -63,11 +63,9 @@ export async function generateMetadata({
     /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
       params.id
     );
-  const query = supabase.from("v_domain_details").select("domain").limit(1);
+  const query = supabase.from("domain").select("domain").limit(1);
   const { data } = isUuid
-    ? await query
-        .eq("domain_id", params.id)
-        .maybeSingle<{ domain: string | null }>()
+    ? await query.eq("id", params.id).maybeSingle<{ domain: string | null }>()
     : await query
         .eq("domain", params.id)
         .maybeSingle<{ domain: string | null }>();
@@ -82,17 +80,29 @@ export async function generateMetadata({
 async function getData(domainId: string) {
   const supabase = await createClient();
 
-  const { data: details, error: detailsError } = await supabase
-    .from("v_domain_details")
-    .select("*")
-    .eq("domain_id", domainId)
-    .maybeSingle<DomainDetailsRow>();
+  // Fallback to base domain row to avoid dependency on views
+  const { data: base, error: baseErr } = await supabase
+    .from("domain")
+    .select(
+      "id, domain, first_seen, last_seen, total_mentions, unique_videos, unique_author_count, is_suspicious"
+    )
+    .eq("id", domainId)
+    .maybeSingle<{
+      id: string;
+      domain: string;
+      first_seen: string | null;
+      last_seen: string | null;
+      total_mentions: number | null;
+      unique_videos: number | null;
+      unique_author_count: number | null;
+      is_suspicious: boolean | null;
+    }>();
 
-  if (detailsError) {
-    throw new Error(`Failed to load domain details: ${detailsError.message}`);
+  if (baseErr) {
+    throw new Error(`Failed to load domain: ${baseErr.message}`);
   }
 
-  if (!details || !details.domain) {
+  if (!base) {
     return {
       details: null,
       mentions: [],
@@ -104,11 +114,24 @@ async function getData(domainId: string) {
     };
   }
 
+  const details: DomainDetailsRow = {
+    domain_id: base.id,
+    domain: base.domain,
+    first_seen: base.first_seen,
+    last_seen: base.last_seen,
+    total_mentions: base.total_mentions ?? 0,
+    video_mentions: null,
+    comment_mentions: null,
+    unique_videos: base.unique_videos ?? null,
+    unique_authors: base.unique_author_count ?? null,
+    is_suspicious: base.is_suspicious ?? null,
+  };
+
   // Recent mentions for this domain
   const { data: mentions, error: mentionsError } = await supabase
     .from("v_domain_mentions_recent")
     .select("comment_id, video_id, created_at")
-    .eq("domain", details.domain)
+    .eq("domain", details.domain!)
     .order("created_at", { ascending: false })
     .limit(20)
     .returns<RecentMention[]>();
@@ -208,14 +231,14 @@ export default async function DomainDetailPage({
   let effectiveId = params.id;
   if (!isUuid) {
     const { data } = await supabase
-      .from("v_domain_details")
-      .select("domain_id")
+      .from("domain")
+      .select("id")
       .eq("domain", params.id)
-      .maybeSingle<{ domain_id: string | null }>();
-    if (!data?.domain_id) {
+      .maybeSingle<{ id: string | null }>();
+    if (!data?.id) {
       notFound();
     }
-    effectiveId = data.domain_id as string;
+    effectiveId = data.id as string;
   }
 
   const {
