@@ -361,7 +361,7 @@ export const domainExtractionJob = inngest.createFunction(
             if (existingDomain) {
               domainId = existingDomain.id;
             } else {
-              const { data: newDomain } = await supabase
+              const { data: newDomain, error: insertErr } = await supabase
                 .from('domain')
                 .insert({
                   domain: domainInfo.domainName,
@@ -369,7 +369,13 @@ export const domainExtractionJob = inngest.createFunction(
                   last_seen: new Date().toISOString(),
                 })
                 .select('id')
-                .single();
+                .single()
+                .returns<{ id: string }>();
+              if (insertErr || !newDomain) {
+                throw new Error(
+                  `Domain insert failed or returned null for ${domainInfo.domainName}`
+                );
+              }
               domainId = newDomain.id;
             }
 
