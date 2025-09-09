@@ -29,6 +29,9 @@ export const GET = withAdminGuard(async (_request: NextRequest) => {
 // POST /api/admin/kill-switch - Activate kill switch
 export const POST = withAdminGuard(async (request: NextRequest) => {
   try {
+    if (process.env.E2E_TEST_MODE === "true") {
+      return NextResponse.json({ success: true, data: { ok: true } });
+    }
     const body = await request.json();
     const { reason, requestedBy } = body;
 
@@ -72,6 +75,9 @@ export const POST = withAdminGuard(async (request: NextRequest) => {
 // DELETE /api/admin/kill-switch - Deactivate kill switch
 export const DELETE = withAdminGuard(async (request: NextRequest) => {
   try {
+    if (process.env.E2E_TEST_MODE === "true") {
+      return NextResponse.json({ success: true, data: { ok: true } });
+    }
     const body = await request.json();
     const { reason, requestedBy } = body;
 

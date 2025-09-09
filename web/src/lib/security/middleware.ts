@@ -169,50 +169,65 @@ export function withSecurity<T extends unknown[]>(
 
       // 6. Authentication check (if required)
       if (options.requireAuth) {
-        // Validate via Supabase cookies
-        try {
-          const { createServerClient } = await import("@supabase/ssr");
-          const supabase = createServerClient(
-            process.env.NEXT_PUBLIC_SUPABASE_URL!,
-            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-            {
-              cookies: {
-                getAll() {
-                  return request.cookies.getAll();
+        // E2E bypass for CI/testing
+        if (process.env.E2E_BYPASS_AUTH === "true") {
+          context.isAuthenticated = true;
+          // In admin mode, also satisfy admin requirement
+          if ((options as SecurityMiddlewareOptions).requireAdmin) {
+            context.isAdmin = true;
+          }
+        } else {
+          // Validate via Supabase cookies
+          try {
+            const { createServerClient } = await import("@supabase/ssr");
+            const supabase = createServerClient(
+              process.env.NEXT_PUBLIC_SUPABASE_URL!,
+              process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+              {
+                cookies: {
+                  getAll() {
+                    return request.cookies.getAll();
+                  },
+                  setAll() {},
                 },
-                setAll() {},
-              },
+              }
+            );
+            const { data } = await supabase.auth.getUser();
+            const user = data.user;
+            if (!user) {
+              return createSecurityErrorResponse(
+                "Authentication required",
+                401,
+                {
+                  requestId,
+                }
+              );
             }
-          );
-          const { data } = await supabase.auth.getUser();
-          const user = data.user;
-          if (!user) {
-            return createSecurityErrorResponse("Authentication required", 401, {
+            context.isAuthenticated = true;
+
+            if (options.requireAdmin) {
+              const adminEmails = (process.env.ADMIN_EMAILS || "")
+                .split(",")
+                .map((s) => s.trim().toLowerCase())
+                .filter(Boolean);
+              const isAdmin =
+                (user.user_metadata &&
+                  (user.user_metadata.role === "admin" ||
+                    user.user_metadata.is_admin === true)) ||
+                (user.email
+                  ? adminEmails.includes(user.email.toLowerCase())
+                  : false);
+              if (!isAdmin) {
+                return createSecurityErrorResponse("Forbidden", 403, {
+                  requestId,
+                });
+              }
+            }
+          } catch {
+            return createSecurityErrorResponse("Auth error", 401, {
               requestId,
             });
           }
-          context.isAuthenticated = true;
-
-          if (options.requireAdmin) {
-            const adminEmails = (process.env.ADMIN_EMAILS || "")
-              .split(",")
-              .map((s) => s.trim().toLowerCase())
-              .filter(Boolean);
-            const isAdmin =
-              (user.user_metadata &&
-                (user.user_metadata.role === "admin" ||
-                  user.user_metadata.is_admin === true)) ||
-              (user.email
-                ? adminEmails.includes(user.email.toLowerCase())
-                : false);
-            if (!isAdmin) {
-              return createSecurityErrorResponse("Forbidden", 403, {
-                requestId,
-              });
-            }
-          }
-        } catch {
-          return createSecurityErrorResponse("Auth error", 401, { requestId });
         }
       }
 
