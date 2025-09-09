@@ -63,6 +63,12 @@ Stores unique domains discovered across all comments.
 - `metadata` JSONB for future DNS/WHOIS enrichment
 - First/last seen tracking for trend analysis
 
+HTTP Enrichment (Prompt 41):
+
+- `metadata.http` stores minimal HTTP verifier results:
+  - `reachable` (bool), `status` (int), `server` (text), `method` (text), `url` (text), `checked_at` (timestamptz)
+- `verified_at` (timestamptz) may be set on success to indicate last HTTP verification time (optional column; if absent, use `metadata.http.checked_at`).
+
 **Indexes:**
 
 - Unique constraint on `domain_name`

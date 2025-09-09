@@ -98,6 +98,8 @@ MAX_CONCURRENT_DISCOVERY_JOBS=5
 MAX_CONCURRENT_HARVESTING_JOBS=10
 DISCOVERY_JOB_TIMEOUT_MINUTES=30
 HARVESTING_JOB_TIMEOUT_MINUTES=60
+# HTTP Enrichment
+HTTP_ENRICH_RPM=30
 ```
 
 ### 4. Inngest Cloud Setup
@@ -159,6 +161,16 @@ HARVESTING_JOB_TIMEOUT_MINUTES=60
 - **Schedule**: Weekly (Sundays at 2 AM)
 - **Purpose**: Clean up old data and logs
 - **Default**: Keep 90 days of data
+
+### Enrichment Jobs
+
+**Domain HTTP Enrichment** (`domain/http.enrich.scheduled`)
+
+- **Schedule**: Every 1 minute (cron `* * * * *`)
+- **Purpose**: Minimal HEAD/GET check for discovered domains to capture reachability, status, and server header
+- **Rate Limit**: Token bucket of 30/min via Upstash (`HTTP_ENRICH_RPM`)
+- **Timeout**: 5s per request; respects basic robots.txt disallow of `/`
+- **Storage**: Saves a small JSON blob under `domain.metadata.http` and sets `verified_at` on success
 
 ## Admin API Endpoints
 

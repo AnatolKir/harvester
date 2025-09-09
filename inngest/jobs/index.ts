@@ -4,6 +4,7 @@ export { videoDiscoveryJob, manualVideoDiscoveryJob } from './discovery';
 export { discoveryBackfillJob } from './discovery-backfill';
 
 export { commentHarvestingJob, domainExtractionJob } from './harvesting';
+export { httpEnrichmentJob } from './enrichment-http';
 
 export {
   killSwitchJob,
@@ -20,6 +21,7 @@ import { videoDiscoveryJob, manualVideoDiscoveryJob } from './discovery';
 import { discoveryBackfillJob } from './discovery-backfill';
 
 import { commentHarvestingJob, domainExtractionJob } from './harvesting';
+import { httpEnrichmentJob } from './enrichment-http';
 
 import {
   killSwitchJob,
@@ -39,6 +41,7 @@ export const allJobs = [
   // Harvesting jobs
   commentHarvestingJob,
   domainExtractionJob,
+  httpEnrichmentJob,
 
   // System jobs
   killSwitchJob,

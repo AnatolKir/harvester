@@ -19,6 +19,10 @@ const env = getServerEnv();
 // Ensure burst capacity is at most 1x RPM as requested
 const discoveryTokensPerMinute = Math.max(0, Number(env.DISCOVERY_RPM || 0));
 const commentsTokensPerMinute = Math.max(0, Number(env.COMMENTS_RPM || 0));
+const httpEnrichmentTokensPerMinute = Math.max(
+  0,
+  Number(env.HTTP_ENRICH_RPM || 30)
+);
 
 const discoveryLimiter = new Ratelimit({
   redis,
@@ -42,6 +46,17 @@ const commentsLimiter = new Ratelimit({
   prefix: "@upstash/ratelimit:mcp:comments",
 });
 
+const httpEnrichmentLimiter = new Ratelimit({
+  redis,
+  limiter: Ratelimit.tokenBucket(
+    httpEnrichmentTokensPerMinute,
+    "1 m",
+    httpEnrichmentTokensPerMinute
+  ),
+  analytics: true,
+  prefix: "@upstash/ratelimit:http:enrichment",
+});
+
 function toMsFromReset(reset: number): number {
   // Upstash returns reset as a UNIX timestamp (seconds) or ms depending on runtime.
   // Normalize to milliseconds from now.
@@ -59,14 +74,14 @@ function jitterMs(base: number): number {
 async function acquireWithBackoff(
   limiter: Ratelimit,
   opts: RateLimitAcquireOptions
-): Promise<{ remaining: number; limit: number; waitedMs: number }>
-{
+): Promise<{ remaining: number; limit: number; waitedMs: number }> {
   const { identifier = "global", logger, label = "token", maxWaitMs } = opts;
   const startedAt = Date.now();
   let totalWaitMs = 0;
 
   for (;;) {
-    const { success, remaining, limit, reset } = await limiter.limit(identifier);
+    const { success, remaining, limit, reset } =
+      await limiter.limit(identifier);
 
     if (success) {
       if (logger) {
@@ -111,16 +126,27 @@ async function acquireWithBackoff(
 
 export async function acquireDiscoveryToken(
   opts: RateLimitAcquireOptions = {}
-): Promise<{ remaining: number; limit: number; waitedMs: number }>
-{
-  return acquireWithBackoff(discoveryLimiter, { ...opts, label: opts.label ?? "discovery" });
+): Promise<{ remaining: number; limit: number; waitedMs: number }> {
+  return acquireWithBackoff(discoveryLimiter, {
+    ...opts,
+    label: opts.label ?? "discovery",
+  });
 }
 
 export async function acquireCommentsToken(
   opts: RateLimitAcquireOptions = {}
-): Promise<{ remaining: number; limit: number; waitedMs: number }>
-{
-  return acquireWithBackoff(commentsLimiter, { ...opts, label: opts.label ?? "comments" });
+): Promise<{ remaining: number; limit: number; waitedMs: number }> {
+  return acquireWithBackoff(commentsLimiter, {
+    ...opts,
+    label: opts.label ?? "comments",
+  });
 }
 
-
+export async function acquireHttpEnrichmentToken(
+  opts: RateLimitAcquireOptions = {}
+): Promise<{ remaining: number; limit: number; waitedMs: number }> {
+  return acquireWithBackoff(httpEnrichmentLimiter, {
+    ...opts,
+    label: opts.label ?? "http_enrich",
+  });
+}

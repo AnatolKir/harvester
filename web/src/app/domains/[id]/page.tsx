@@ -37,6 +37,22 @@ type VideoRow = {
   title: string | null;
 };
 
+type HttpMeta = {
+  reachable: boolean;
+  status: number | null;
+  server: string | null;
+  method: string | null;
+  url: string;
+  checked_at: string;
+  reason?: string;
+};
+
+type DomainMeta = {
+  id: string;
+  metadata: { http?: HttpMeta } | null;
+  verified_at?: string | null;
+};
+
 export async function generateMetadata({
   params,
 }: {
@@ -47,7 +63,7 @@ export async function generateMetadata({
     .from("v_domain_details")
     .select("domain")
     .eq("domain_id", params.id)
-    .maybeSingle();
+    .maybeSingle<{ domain: string | null }>();
 
   const domain = data?.domain ?? "Domain";
   return {
@@ -76,6 +92,8 @@ async function getData(domainId: string) {
       comments: new Map(),
       videos: new Map(),
       timeseries: [] as { date: string; mentions: number }[],
+      httpMeta: null as HttpMeta | null,
+      verifiedAt: null as string | null,
     };
   }
 
@@ -149,12 +167,23 @@ async function getData(domainId: string) {
     mentions,
   }));
 
+  // Fetch domain metadata (http enrichment)
+  const { data: domainRow } = await supabase
+    .from("domain")
+    .select("id, metadata")
+    .eq("id", domainId)
+    .maybeSingle<DomainMeta>();
+  const httpMeta: HttpMeta | null = domainRow?.metadata?.http ?? null;
+  const verifiedAt: string | null = httpMeta?.checked_at ?? null;
+
   return {
     details,
     mentions: mentions ?? [],
     comments: commentsMap,
     videos: videosMap,
     timeseries,
+    httpMeta,
+    verifiedAt,
   };
 }
 
@@ -163,9 +192,15 @@ export default async function DomainDetailPage({
 }: {
   params: { id: string };
 }) {
-  const { details, mentions, comments, videos, timeseries } = await getData(
-    params.id
-  );
+  const {
+    details,
+    mentions,
+    comments,
+    videos,
+    timeseries,
+    httpMeta,
+    verifiedAt,
+  } = await getData(params.id);
 
   if (!details) {
     notFound();
@@ -183,39 +218,65 @@ export default async function DomainDetailPage({
       </div>
 
       <div className="grid gap-4 md:grid-cols-4">
-        <div className="rounded-lg border bg-card p-4">
+        <div className="bg-card rounded-lg border p-4">
           <div className="text-2xl font-bold">
             {details!.total_mentions ?? 0}
           </div>
-          <p className="text-sm text-muted-foreground">Total mentions</p>
+          <p className="text-muted-foreground text-sm">Total mentions</p>
         </div>
-        <div className="rounded-lg border bg-card p-4">
+        <div className="bg-card rounded-lg border p-4">
           <div className="text-2xl font-bold">
             {details!.unique_videos ?? 0}
           </div>
-          <p className="text-sm text-muted-foreground">Unique videos</p>
+          <p className="text-muted-foreground text-sm">Unique videos</p>
         </div>
-        <div className="rounded-lg border bg-card p-4">
+        <div className="bg-card rounded-lg border p-4">
           <div className="text-2xl font-bold">
             {details!.unique_authors ?? 0}
           </div>
-          <p className="text-sm text-muted-foreground">Unique authors</p>
+          <p className="text-muted-foreground text-sm">Unique authors</p>
         </div>
-        <div className="rounded-lg border bg-card p-4">
+        <div className="bg-card rounded-lg border p-4">
           <div className="text-2xl font-bold">
             {details!.is_suspicious ? "Yes" : "No"}
           </div>
-          <p className="text-sm text-muted-foreground">High activity</p>
+          <p className="text-muted-foreground text-sm">High activity</p>
         </div>
       </div>
 
-      <div className="rounded-lg border bg-card p-4">
+      {httpMeta && (
+        <div className="bg-card rounded-lg border p-4">
+          <h2 className="mb-2 text-xl font-semibold">HTTP check</h2>
+          <div className="grid grid-cols-2 gap-2 text-sm">
+            <div>
+              <div className="text-muted-foreground">Status</div>
+              <div className="font-medium">{httpMeta.status ?? "-"}</div>
+            </div>
+            <div>
+              <div className="text-muted-foreground">Server</div>
+              <div className="font-medium">{httpMeta.server ?? "-"}</div>
+            </div>
+            <div>
+              <div className="text-muted-foreground">Verified at</div>
+              <div className="font-medium">
+                {verifiedAt ? new Date(verifiedAt).toLocaleString() : "-"}
+              </div>
+            </div>
+            <div>
+              <div className="text-muted-foreground">Method</div>
+              <div className="font-medium">{httpMeta.method ?? "-"}</div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="bg-card rounded-lg border p-4">
         <h2 className="mb-4 text-xl font-semibold">Recent activity (14d)</h2>
         <div className="flex h-24 items-end gap-2">
           {timeseries.map((p) => (
             <div key={p.date} className="flex-1">
               <div
-                className="w-full bg-primary/20"
+                className="bg-primary/20 w-full"
                 style={{ height: `${Math.min(100, p.mentions * 10)}%` }}
               />
             </div>
@@ -223,7 +284,7 @@ export default async function DomainDetailPage({
         </div>
       </div>
 
-      <div className="rounded-lg border bg-card p-4">
+      <div className="bg-card rounded-lg border p-4">
         <h2 className="mb-4 text-xl font-semibold">Recent mentions</h2>
         <ul className="space-y-3">
           {mentions.map((m, idx) => {
@@ -235,7 +296,7 @@ export default async function DomainDetailPage({
                 className="border-b pb-3 last:border-b-0"
               >
                 <div className="flex flex-col gap-1">
-                  <div className="text-sm text-muted-foreground">
+                  <div className="text-muted-foreground text-sm">
                     {new Date(m.created_at).toLocaleString()}
                   </div>
                   {c ? (
@@ -248,7 +309,7 @@ export default async function DomainDetailPage({
                   )}
                   {v && (
                     <a
-                      className="text-sm text-primary underline"
+                      className="text-primary text-sm underline"
                       href={v.url}
                       target="_blank"
                       rel="noreferrer"
