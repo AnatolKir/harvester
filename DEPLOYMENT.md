@@ -395,6 +395,29 @@ psql $DATABASE_URL < backup.sql
 - Proper CORS configuration
 - Rate limiting enabled
 
+### Security Headers & CSP
+
+- App and API responses include strict security headers via Next.js middleware (`web/src/middleware.ts`).
+- Content Security Policy is generated dynamically in `web/src/lib/security/headers.ts`.
+- Defaults are non-breaking in development (allows `'unsafe-eval'` for HMR and `'unsafe-inline'` for styles).
+- Production adds HSTS and `upgrade-insecure-requests`.
+
+Environment overrides:
+
+```bash
+# Allow or block TikTok embeds (frames/scripts). Defaults to true if unset.
+ALLOW_TIKTOK_EMBEDS=true
+
+# Supabase URL is used to permit outbound connections in connect-src
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+```
+
+To verify headers after deploy:
+
+```bash
+curl -sI https://yourdomain.com | egrep "^(content-security-policy|strict-transport-security|x-content-type-options|referrer-policy):" -i
+```
+
 ### Database Security
 
 - Row Level Security (RLS) enabled

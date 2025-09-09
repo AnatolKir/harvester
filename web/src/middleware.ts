@@ -1,3 +1,21 @@
+import { NextRequest, NextResponse } from "next/server";
+import {
+  applySecurityHeaders,
+  buildSecurityHeaders,
+} from "./lib/security/headers";
+
+export function middleware(req: NextRequest) {
+  const res = NextResponse.next();
+  const headers = buildSecurityHeaders(req);
+  return applySecurityHeaders(res, headers);
+}
+
+export const config = {
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|assets).*)",
+  ],
+};
+
 import { createServerClient } from "@supabase/ssr";
 import { type NextRequest, NextResponse } from "next/server";
 
