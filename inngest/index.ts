@@ -9,6 +9,7 @@ export * from './jobs/harvesting';
 export * from './jobs/system';
 export * from './jobs/discovery-backfill';
 export * from './jobs/enrichment-http';
+export * from './jobs/enrichment-dnswhois';
 
 // Helper functions for manual job triggers
 import { inngest } from './client';

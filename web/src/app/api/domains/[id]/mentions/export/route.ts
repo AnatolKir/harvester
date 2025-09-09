@@ -71,9 +71,9 @@ export const GET = withSecurity(async (request: NextRequest) => {
 
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
-      // header
+      // header (add video_url)
       controller.enqueue(
-        encoder.encode("domain,comment_id,video_id,created_at\n")
+        encoder.encode("domain,comment_id,video_id,video_url,created_at\n")
       );
 
       let offset = 0;
@@ -100,6 +100,37 @@ export const GET = withSecurity(async (request: NextRequest) => {
         const rows = data || [];
         if (rows.length === 0) break;
 
+        // Lookup video URLs for this chunk (schema-agnostic mapping)
+        const videoIds = Array.from(
+          new Set(
+            (rows as Array<{ video_id: string | null }>)
+              .map((r) => r.video_id)
+              .filter((v): v is string => Boolean(v))
+          )
+        );
+
+        const videoUrlById: Record<string, string> = {};
+        if (videoIds.length > 0) {
+          const { data: videoRows } = await supabase
+            .from("video")
+            .select("id,url,video_url,video_id")
+            .in("id", videoIds);
+          for (const v of (videoRows || []) as Array<{
+            id: string;
+            url?: string | null;
+            video_url?: string | null;
+            video_id?: string | null;
+          }>) {
+            const url =
+              v.url ||
+              v.video_url ||
+              (v.video_id
+                ? `https://www.tiktok.com/@/video/${v.video_id}`
+                : "");
+            videoUrlById[v.id] = url || "";
+          }
+        }
+
         let csvChunk = "";
         for (const row of rows as Array<{
           domain: string;
@@ -107,9 +138,10 @@ export const GET = withSecurity(async (request: NextRequest) => {
           video_id: string | null;
           created_at: string;
         }>) {
+          const videoUrl = row.video_id ? videoUrlById[row.video_id] || "" : "";
           csvChunk += `${csvEscape(row.domain)},${csvEscape(
             row.comment_id
-          )},${csvEscape(row.video_id)},${csvEscape(row.created_at)}\n`;
+          )},${csvEscape(row.video_id)},${csvEscape(videoUrl)},${csvEscape(row.created_at)}\n`;
         }
         controller.enqueue(encoder.encode(csvChunk));
         offset += rows.length;

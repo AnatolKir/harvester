@@ -47,9 +47,24 @@ type HttpMeta = {
   reason?: string;
 };
 
+type DnsMeta = {
+  a?: string[];
+  aaaa?: string[];
+  cname?: string | null;
+  mx?: boolean;
+  checked_at: string;
+};
+
+type WhoisMeta = {
+  created_at?: string | null;
+  expires_at?: string | null;
+  registrar?: string | null;
+  checked_at: string;
+};
+
 type DomainMeta = {
   id: string;
-  metadata: { http?: HttpMeta } | null;
+  metadata: { http?: HttpMeta; dns?: DnsMeta; whois?: WhoisMeta } | null;
   verified_at?: string | null;
 };
 
@@ -177,32 +192,71 @@ async function getData(domainId: string) {
     .map((m) => m.video_id)
     .filter((v): v is string => Boolean(v));
 
-  // Fetch related comments
+  // Fetch related comments (schema-agnostic mapping)
   let commentsMap = new Map<string, CommentRow>();
   if (commentIds.length > 0) {
-    const { data: comments, error: commentsError } = await supabase
+    const { data: commentsRaw, error: commentsError } = await supabase
       .from("comment")
-      .select("id, video_id, content, author_username, posted_at")
-      .in("id", commentIds)
-      .returns<CommentRow[]>();
+      .select("*")
+      .in("id", commentIds);
     if (commentsError) {
       throw new Error(`Failed to load comments: ${commentsError.message}`);
     }
-    commentsMap = new Map((comments ?? []).map((c) => [c.id, c]));
+    const getString = (
+      obj: Record<string, unknown>,
+      key: string
+    ): string | null => {
+      const v = obj[key];
+      return typeof v === "string" ? v : null;
+    };
+    const mapped: CommentRow[] = (commentsRaw || []).map(
+      (row: Record<string, unknown>) => {
+        const base = row as { id: string; video_id: string };
+        return {
+          id: base.id,
+          video_id: base.video_id,
+          content: getString(row, "content") ?? getString(row, "text") ?? "",
+          author_username:
+            getString(row, "author_username") ??
+            getString(row, "username") ??
+            "",
+          posted_at:
+            getString(row, "posted_at") ?? getString(row, "created_at"),
+        };
+      }
+    );
+    commentsMap = new Map(mapped.map((c) => [c.id, c]));
   }
 
-  // Fetch related videos
+  // Fetch related videos (schema-agnostic mapping)
   let videosMap = new Map<string, VideoRow>();
   if (videoIds.length > 0) {
-    const { data: videos, error: videosError } = await supabase
+    const { data: videosRaw, error: videosError } = await supabase
       .from("video")
-      .select("id, video_id, url, title")
-      .in("id", videoIds)
-      .returns<VideoRow[]>();
+      .select("*")
+      .in("id", videoIds);
     if (videosError) {
       throw new Error(`Failed to load videos: ${videosError.message}`);
     }
-    videosMap = new Map((videos ?? []).map((v) => [v.id, v]));
+    const getString = (
+      obj: Record<string, unknown>,
+      key: string
+    ): string | null => {
+      const v = obj[key];
+      return typeof v === "string" ? v : null;
+    };
+    const mappedVideos: VideoRow[] = (videosRaw || []).map(
+      (row: Record<string, unknown>) => {
+        const base = row as { id: string; video_id: string };
+        return {
+          id: base.id,
+          video_id: base.video_id,
+          url: getString(row, "url") ?? getString(row, "video_url") ?? "",
+          title: getString(row, "title") ?? getString(row, "caption"),
+        };
+      }
+    );
+    videosMap = new Map(mappedVideos.map((v) => [v.id, v]));
   }
 
   // Build a tiny time series for last 14 days by grouping the same mentions
@@ -227,13 +281,18 @@ async function getData(domainId: string) {
     mentions,
   }));
 
-  // Fetch domain metadata (http enrichment)
+  // Fetch domain metadata (http/dns/whois enrichment)
   const { data: domainRow } = await supabase
     .from("domain")
     .select("id, metadata")
     .eq("id", domainId)
     .maybeSingle<DomainMeta>();
-  const httpMeta: HttpMeta | null = domainRow?.metadata?.http ?? null;
+  const md = (domainRow?.metadata ?? null) as {
+    http?: HttpMeta;
+    dns?: DnsMeta;
+    whois?: WhoisMeta;
+  } | null;
+  const httpMeta: HttpMeta | null = md?.http ?? null;
   const verifiedAt: string | null = httpMeta?.checked_at ?? null;
 
   return {
@@ -244,6 +303,8 @@ async function getData(domainId: string) {
     timeseries,
     httpMeta,
     verifiedAt,
+    dnsMeta: md?.dns ?? null,
+    whoisMeta: md?.whois ?? null,
   };
 }
 
@@ -291,6 +352,8 @@ export default async function DomainDetailPage({
     timeseries,
     httpMeta,
     verifiedAt,
+    dnsMeta,
+    whoisMeta,
   } = await getData(effectiveId);
 
   if (!details) {
@@ -306,6 +369,44 @@ export default async function DomainDetailPage({
         <p className="text-muted-foreground">
           Domain overview, recent mentions, and related videos.
         </p>
+        {(dnsMeta || whoisMeta) && (
+          <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+            {dnsMeta && (
+              <span
+                className={`inline-flex items-center rounded-full border px-2 py-1 ${
+                  (dnsMeta.a?.length || 0) > 0 ||
+                  (dnsMeta.aaaa?.length || 0) > 0 ||
+                  (dnsMeta.cname ?? "")
+                    ? "bg-emerald-50 text-emerald-800"
+                    : "bg-amber-50 text-amber-800"
+                }`}
+                title={`A:${(dnsMeta.a ?? []).join(",") || "-"} | AAAA:${
+                  (dnsMeta.aaaa ?? []).join(",") || "-"
+                } | CNAME:${dnsMeta.cname ?? "-"} | MX:${dnsMeta.mx ? "yes" : "no"}`}
+              >
+                {(dnsMeta.a?.length || 0) > 0 ||
+                (dnsMeta.aaaa?.length || 0) > 0 ||
+                (dnsMeta.cname ?? "")
+                  ? "DNS OK"
+                  : "No DNS"}
+              </span>
+            )}
+            {whoisMeta && (
+              <>
+                {whoisMeta.created_at && (
+                  <span className="inline-flex items-center rounded-full border bg-slate-50 px-2 py-1 text-slate-800">
+                    Created {new Date(whoisMeta.created_at).getFullYear()}
+                  </span>
+                )}
+                {whoisMeta.registrar && (
+                  <span className="inline-flex items-center rounded-full border bg-slate-50 px-2 py-1 text-slate-800">
+                    {whoisMeta.registrar}
+                  </span>
+                )}
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="grid gap-4 md:grid-cols-4">

@@ -5,6 +5,7 @@ export { discoveryBackfillJob } from './discovery-backfill';
 
 export { commentHarvestingJob, domainExtractionJob } from './harvesting';
 export { httpEnrichmentJob } from './enrichment-http';
+export { dnsWhoisEnrichmentJob } from './enrichment-dnswhois';
 
 export {
   killSwitchJob,
@@ -22,6 +23,7 @@ import { discoveryBackfillJob } from './discovery-backfill';
 
 import { commentHarvestingJob, domainExtractionJob } from './harvesting';
 import { httpEnrichmentJob } from './enrichment-http';
+import { dnsWhoisEnrichmentJob } from './enrichment-dnswhois';
 
 import {
   killSwitchJob,
@@ -42,6 +44,7 @@ export const allJobs = [
   commentHarvestingJob,
   domainExtractionJob,
   httpEnrichmentJob,
+  dnsWhoisEnrichmentJob,
 
   // System jobs
   killSwitchJob,

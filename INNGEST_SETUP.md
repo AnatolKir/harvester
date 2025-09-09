@@ -179,6 +179,27 @@ ADMIN_ALLOWED_ORIGINS=https://yourdomain.com,https://staging.yourdomain.com
 - **Timeout**: 5s per request; respects basic robots.txt disallow of `/`
 - **Storage**: Saves a small JSON blob under `domain.metadata.http` and sets `verified_at` on success
 
+**Domain DNS/WHOIS Enrichment** (`domain/dnswhois.enrich.scheduled`)
+
+- **Schedule**: Every 1 minute (cron `* * * * *`)
+- **Purpose**: Resolve minimal DNS records and optionally query a lightweight WHOIS API
+- **Rate Limit**: Token bucket of 30/min via Upstash (reuses HTTP enrichment limiter)
+- **Timeout**: ≤5s per DNS/WHOIS call with jittered retries via bucket wait
+- **Storage**:
+  - `domain.metadata.dns`: `a[]`, `aaaa[]`, `cname`, `mx`, `checked_at`
+  - `domain.metadata.whois`: `created_at`, `expires_at`, `registrar`, `checked_at` (only when configured)
+- **Verified**: Sets `verified_at` when DNS is resolvable (A/AAAA/CNAME present)
+
+#### Environment Variables
+
+```bash
+# Optional WHOIS provider
+WHOIS_API_URL=https://api.example.com/whois
+WHOIS_API_KEY=your_api_key_here
+```
+
+These are optional. When unset, WHOIS lookups are skipped and only DNS is stored.
+
 ## Admin API Endpoints
 
 ### Job Management

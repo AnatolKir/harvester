@@ -69,6 +69,14 @@ HTTP Enrichment (Prompt 41):
   - `reachable` (bool), `status` (int), `server` (text), `method` (text), `url` (text), `checked_at` (timestamptz)
 - `verified_at` (timestamptz) may be set on success to indicate last HTTP verification time (optional column; if absent, use `metadata.http.checked_at`).
 
+DNS/WHOIS Enrichment (Prompt 46):
+
+- `metadata.dns` stores lightweight DNS signals:
+  - `a` (text[]), `aaaa` (text[]), `cname` (text | null), `mx` (bool), `checked_at` (timestamptz)
+- `metadata.whois` stores minimal WHOIS fields when configured:
+  - `created_at` (timestamptz | null), `expires_at` (timestamptz | null), `registrar` (text | null), `checked_at` (timestamptz)
+- `verified_at` may also be set when DNS is resolvable (A/AAAA/CNAME present)
+
 **Indexes:**
 
 - Unique constraint on `domain_name`
