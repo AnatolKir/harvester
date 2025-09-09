@@ -191,7 +191,7 @@ async function handleDomainGet(
 
   // Format the response
   const domainDetails: DomainDetails = {
-    ...domain,
+    ...(domainRow as Domain),
     recent_mentions:
       (mentions || []).map((m) => ({
         id: m.id,
