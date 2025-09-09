@@ -59,11 +59,18 @@ export async function generateMetadata({
   params: { id: string };
 }): Promise<Metadata> {
   const supabase = await createClient();
-  const { data } = await supabase
-    .from("v_domain_details")
-    .select("domain")
-    .eq("domain_id", params.id)
-    .maybeSingle<{ domain: string | null }>();
+  const isUuid =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+      params.id
+    );
+  const query = supabase.from("v_domain_details").select("domain").limit(1);
+  const { data } = isUuid
+    ? await query
+        .eq("domain_id", params.id)
+        .maybeSingle<{ domain: string | null }>()
+    : await query
+        .eq("domain", params.id)
+        .maybeSingle<{ domain: string | null }>();
 
   const domain = data?.domain ?? "Domain";
   return {
@@ -192,6 +199,25 @@ export default async function DomainDetailPage({
 }: {
   params: { id: string };
 }) {
+  const supabase = await createClient();
+
+  const isUuid =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+      params.id
+    );
+  let effectiveId = params.id;
+  if (!isUuid) {
+    const { data } = await supabase
+      .from("v_domain_details")
+      .select("domain_id")
+      .eq("domain", params.id)
+      .maybeSingle<{ domain_id: string | null }>();
+    if (!data?.domain_id) {
+      notFound();
+    }
+    effectiveId = data.domain_id as string;
+  }
+
   const {
     details,
     mentions,
@@ -200,7 +226,7 @@ export default async function DomainDetailPage({
     timeseries,
     httpMeta,
     verifiedAt,
-  } = await getData(params.id);
+  } = await getData(effectiveId);
 
   if (!details) {
     notFound();

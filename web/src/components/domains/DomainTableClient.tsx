@@ -2,14 +2,27 @@
 
 import * as React from "react";
 import { ColumnDef } from "@tanstack/react-table";
-import { Globe, ExternalLink, ArrowUpDown, Filter, Calendar } from "lucide-react";
+import {
+  Globe,
+  ExternalLink,
+  ArrowUpDown,
+  Filter,
+  Calendar,
+  Film,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/ui/data-table";
 import { formatDate } from "@/lib/utils";
-// import Link from "next/link";
+import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 // import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import type { DomainOverview } from "@/types/api";
 
@@ -26,7 +39,9 @@ export function DomainTableClient({ initialDomains }: Props) {
   const filteredDomains = React.useMemo(() => {
     let filtered = [...initialDomains];
     if (searchQuery) {
-      filtered = filtered.filter((d) => d.domain.toLowerCase().includes(searchQuery.toLowerCase()));
+      filtered = filtered.filter((d) =>
+        d.domain.toLowerCase().includes(searchQuery.toLowerCase())
+      );
     }
     if (dateFilter !== "all") {
       const now = new Date();
@@ -58,7 +73,11 @@ export function DomainTableClient({ initialDomains }: Props) {
     {
       accessorKey: "domain",
       header: ({ column }) => (
-        <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")} className="h-auto p-0 font-medium">
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          className="h-auto p-0 font-medium"
+        >
           Domain
           <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
@@ -72,11 +91,31 @@ export function DomainTableClient({ initialDomains }: Props) {
             <Globe className="text-muted-foreground h-4 w-4" />
             <span className="font-medium">{domain}</span>
             {isSuspicious && (
-              <Badge variant="destructive" className="text-xs">High Activity</Badge>
+              <Badge variant="destructive" className="text-xs">
+                High Activity
+              </Badge>
             )}
-            <Button variant="ghost" size="sm" className="h-auto p-0" onClick={() => window.open(`https://${domain}`, "_blank")}>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-auto p-0"
+              onClick={() => window.open(`https://${domain}`, "_blank")}
+            >
               <ExternalLink className="h-3 w-3" />
             </Button>
+            <Link
+              href={`/domains/${encodeURIComponent(domain)}`}
+              className="text-primary"
+            >
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-auto p-0"
+                aria-label="View videos mentioning this domain"
+              >
+                <Film className="h-3 w-3" />
+              </Button>
+            </Link>
           </div>
         );
       },
@@ -84,32 +123,56 @@ export function DomainTableClient({ initialDomains }: Props) {
     {
       accessorKey: "total_mentions",
       header: ({ column }) => (
-        <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")} className="h-auto p-0 font-medium">
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          className="h-auto p-0 font-medium"
+        >
           Mentions
           <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
       ),
-      cell: ({ row }) => <span className="font-mono">{row.getValue("total_mentions") as number}</span>,
+      cell: ({ row }) => (
+        <span className="font-mono">
+          {row.getValue("total_mentions") as number}
+        </span>
+      ),
     },
     {
       accessorKey: "first_seen",
       header: ({ column }) => (
-        <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")} className="h-auto p-0 font-medium">
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          className="h-auto p-0 font-medium"
+        >
           First Seen
           <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
       ),
-      cell: ({ row }) => <span className="text-muted-foreground">{formatDate(row.getValue("first_seen") as string)}</span>,
+      cell: ({ row }) => (
+        <span className="text-muted-foreground">
+          {formatDate(row.getValue("first_seen") as string)}
+        </span>
+      ),
     },
     {
       accessorKey: "last_seen",
       header: ({ column }) => (
-        <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")} className="h-auto p-0 font-medium">
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          className="h-auto p-0 font-medium"
+        >
           Last Seen
           <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
       ),
-      cell: ({ row }) => <span className="text-muted-foreground">{formatDate(row.getValue("last_seen") as string)}</span>,
+      cell: ({ row }) => (
+        <span className="text-muted-foreground">
+          {formatDate(row.getValue("last_seen") as string)}
+        </span>
+      ),
     },
   ];
 
@@ -118,13 +181,20 @@ export function DomainTableClient({ initialDomains }: Props) {
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Domains</h1>
-          <p className="text-muted-foreground">All domains discovered from TikTok comments and promotional content.</p>
+          <p className="text-muted-foreground">
+            All domains discovered from TikTok comments and promotional content.
+          </p>
         </div>
       </div>
 
       <div className="flex flex-col gap-4 md:flex-row md:items-center">
         <div className="relative flex-1 md:max-w-sm">
-          <Input placeholder="Search domains..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-3" />
+          <Input
+            placeholder="Search domains..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-3"
+          />
         </div>
         <div className="flex gap-2">
           <Select value={dateFilter} onValueChange={setDateFilter}>
@@ -159,15 +229,27 @@ export function DomainTableClient({ initialDomains }: Props) {
           <p className="text-muted-foreground text-sm">Filtered domains</p>
         </div>
         <div className="bg-card rounded-lg border p-4">
-          <div className="text-2xl font-bold">{filteredDomains.filter((d) => new Date(d.first_seen).toDateString() === new Date().toDateString()).length}</div>
+          <div className="text-2xl font-bold">
+            {
+              filteredDomains.filter(
+                (d) =>
+                  new Date(d.first_seen).toDateString() ===
+                  new Date().toDateString()
+              ).length
+            }
+          </div>
           <p className="text-muted-foreground text-sm">New today</p>
         </div>
         <div className="bg-card rounded-lg border p-4">
-          <div className="text-2xl font-bold">{filteredDomains.reduce((sum, d) => sum + d.total_mentions, 0)}</div>
+          <div className="text-2xl font-bold">
+            {filteredDomains.reduce((sum, d) => sum + d.total_mentions, 0)}
+          </div>
           <p className="text-muted-foreground text-sm">Total mentions</p>
         </div>
         <div className="bg-card rounded-lg border p-4">
-          <div className="text-2xl font-bold">{filteredDomains.filter((d) => d.total_mentions > 50).length}</div>
+          <div className="text-2xl font-bold">
+            {filteredDomains.filter((d) => d.total_mentions > 50).length}
+          </div>
           <p className="text-muted-foreground text-sm">High activity</p>
         </div>
       </div>
@@ -176,5 +258,3 @@ export function DomainTableClient({ initialDomains }: Props) {
     </div>
   );
 }
-
-
