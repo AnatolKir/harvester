@@ -99,8 +99,10 @@ export function withSecurity<T extends unknown[]>(
         if ("error" in (rl as Record<string, unknown>)) {
           return rl as unknown as NextResponse;
         }
-        rateLimitHeaders = (rl as { headers: Record<string, string> })
-          .headers as unknown as Record<string, string>;
+        const rawHeaders = (rl as { headers: Record<string, unknown> }).headers;
+        rateLimitHeaders = Object.fromEntries(
+          Object.entries(rawHeaders).map(([k, v]) => [k, String(v)])
+        );
       }
 
       // 4. Origin / CORS checks for non-GET
