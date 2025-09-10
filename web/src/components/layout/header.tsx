@@ -13,7 +13,7 @@ export function Header() {
         <div className="mr-4 hidden md:flex">
           <Link href="/" className="mr-6 flex items-center space-x-2">
             <span className="hidden font-bold sm:inline-block">
-              TikTok Domain Harvester
+              Highly Educated
             </span>
           </Link>
           <nav className="flex items-center gap-4 text-sm lg:gap-6">
