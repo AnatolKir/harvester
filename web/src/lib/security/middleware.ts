@@ -32,6 +32,7 @@ export interface SecurityContext {
   clientId: string;
   isAuthenticated: boolean;
   isSuspicious: boolean;
+  isAdmin?: boolean;
   timestamp: number;
 }
 
