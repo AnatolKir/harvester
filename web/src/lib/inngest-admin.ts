@@ -132,7 +132,8 @@ export class InngestAdmin {
 
       if (error) throw error;
 
-      return Boolean(data?.value === true);
+      const row = data as { value: boolean } | null;
+      return Boolean(row?.value === true);
     } catch (error) {
       console.error("Failed to check kill switch status:", error);
       return false;
