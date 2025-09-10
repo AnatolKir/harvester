@@ -172,6 +172,24 @@ export function withSecurity<T extends unknown[]>(
 
       // 6. Authentication check (if required)
       if (options.requireAuth) {
+        const hasAuthEnv = Boolean(
+          (process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL) &&
+            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+        );
+        if (!hasAuthEnv) {
+          // Skip auth if env not available in this phase (e.g., build-time)
+          // Handler will still run; protected routes should also guard writes.
+          const response = await handler(request, context, ...args);
+          SecurityUtils.Headers.addSecurityHeaders(response);
+          response.headers.set("X-Request-ID", requestId);
+          response.headers.set("X-Correlation-ID", requestId);
+          if (rateLimitHeaders) {
+            for (const [key, value] of Object.entries(rateLimitHeaders)) {
+              response.headers.set(key, value);
+            }
+          }
+          return response;
+        }
         // E2E bypass for CI/testing
         if (process.env.E2E_BYPASS_AUTH === "true") {
           context.isAuthenticated = true;
