@@ -4,6 +4,19 @@ import { withAdminGuard } from "@/lib/security/admin";
 import { createPaginatedResponse } from "@/lib/api";
 
 export const GET = withAdminGuard(async (request: NextRequest) => {
+  if (
+    !process.env.NEXT_PUBLIC_SUPABASE_URL ||
+    !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  ) {
+    return createPaginatedResponse([], {
+      page: 1,
+      limit: 20,
+      total: 0,
+      totalPages: 1,
+      hasNext: false,
+      hasPrev: false,
+    });
+  }
   const supabase = await createClient();
   const params = request.nextUrl.searchParams;
   const level = params.get("level") || undefined; // debug|info|warn|error
