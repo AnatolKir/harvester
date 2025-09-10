@@ -14,6 +14,7 @@ import {
   AlertTriangle,
   ScrollText,
   FileDown,
+  Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -25,6 +26,7 @@ const navigation = [
   { name: "Data", href: "/data", icon: Database },
   { name: "Settings", href: "/settings", icon: Settings },
   { name: "Admin", href: "/admin", icon: Settings },
+  { name: "Users", href: "/admin/users", icon: Users },
   { name: "Jobs", href: "/admin/jobs", icon: Activity },
   { name: "Logs", href: "/admin/logs", icon: ScrollText },
   { name: "Kill Switch", href: "/admin/kill-switch", icon: ShieldAlert },

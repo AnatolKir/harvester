@@ -1,4 +1,4 @@
-import { MCPClient } from './client';
+import { MCPClient } from "./client";
 
 export async function fetchCommentsForVideo(
   client: MCPClient,
@@ -10,16 +10,16 @@ export async function fetchCommentsForVideo(
   for (let page = 1; page <= maxPages; page++) {
     const idempotencyKey = `comments:${videoId}:${page}`;
     const resp = await client.call(
-      'tiktok.comments.page',
+      "tiktok.comments.page",
       { videoId, page },
       { sticky: true, sessionId, idempotencyKey }
     );
     sessionId = resp.sessionId ?? sessionId;
     const items = (resp.items ?? [])
       .map((c: any) => ({
-        comment_id: String(c.id ?? ''),
-        text: String(c.text ?? ''),
-        user_id: String(c.user_id ?? ''),
+        comment_id: String(c.id ?? ""),
+        text: String(c.text ?? ""),
+        user_id: String(c.user_id ?? ""),
         created_at: c.created_at ?? null,
         lang: c.lang ?? null,
       }))
@@ -29,5 +29,3 @@ export async function fetchCommentsForVideo(
   }
   return out;
 }
-
-

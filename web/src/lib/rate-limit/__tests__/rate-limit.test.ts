@@ -1,16 +1,16 @@
-import { checkRateLimit, RateLimitConfig } from '../index';
-import { Redis } from '@upstash/redis';
+import { checkRateLimit, RateLimitConfig } from "../index";
+import { Redis } from "@upstash/redis";
 
 // Mock already configured in jest.setup.js
 
-describe('Rate Limiting', () => {
+describe("Rate Limiting", () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  describe('checkRateLimit', () => {
-    it('should allow requests within rate limit', async () => {
-      const identifier = 'test-user-123';
+  describe("checkRateLimit", () => {
+    it("should allow requests within rate limit", async () => {
+      const identifier = "test-user-123";
       const result = await checkRateLimit(identifier);
 
       expect(result.success).toBe(true);
@@ -19,10 +19,10 @@ describe('Rate Limiting', () => {
       expect(result.reset).toBeGreaterThan(Date.now());
     });
 
-    it('should use custom config when provided', async () => {
-      const identifier = 'test-user-456';
+    it("should use custom config when provided", async () => {
+      const identifier = "test-user-456";
       const customConfig: RateLimitConfig = {
-        interval: '5m',
+        interval: "5m",
         limit: 50,
       };
 
@@ -32,29 +32,29 @@ describe('Rate Limiting', () => {
       expect(result.limit).toBe(100); // Mocked value
     });
 
-    it('should track different identifiers separately', async () => {
-      const result1 = await checkRateLimit('user-1');
-      const result2 = await checkRateLimit('user-2');
+    it("should track different identifiers separately", async () => {
+      const result1 = await checkRateLimit("user-1");
+      const result2 = await checkRateLimit("user-2");
 
       expect(result1.success).toBe(true);
       expect(result2.success).toBe(true);
     });
 
-    it('should handle Redis errors gracefully', async () => {
+    it("should handle Redis errors gracefully", async () => {
       // Mock Redis to throw an error
       const mockRedis = Redis as jest.MockedClass<typeof Redis>;
       mockRedis.mockImplementationOnce(() => {
-        throw new Error('Redis connection failed');
+        throw new Error("Redis connection failed");
       });
 
       // Should not throw, but return a default response
-      const identifier = 'test-user-error';
+      const identifier = "test-user-error";
       await expect(checkRateLimit(identifier)).resolves.not.toThrow();
     });
   });
 
-  describe('Rate limit headers', () => {
-    it('should generate correct headers from rate limit result', () => {
+  describe("Rate limit headers", () => {
+    it("should generate correct headers from rate limit result", () => {
       const result = {
         success: true,
         limit: 100,
@@ -63,17 +63,17 @@ describe('Rate Limiting', () => {
       };
 
       const headers = {
-        'X-RateLimit-Limit': result.limit.toString(),
-        'X-RateLimit-Remaining': result.remaining.toString(),
-        'X-RateLimit-Reset': new Date(result.reset).toISOString(),
+        "X-RateLimit-Limit": result.limit.toString(),
+        "X-RateLimit-Remaining": result.remaining.toString(),
+        "X-RateLimit-Reset": new Date(result.reset).toISOString(),
       };
 
-      expect(headers['X-RateLimit-Limit']).toBe('100');
-      expect(headers['X-RateLimit-Remaining']).toBe('75');
-      expect(headers['X-RateLimit-Reset']).toBeDefined();
+      expect(headers["X-RateLimit-Limit"]).toBe("100");
+      expect(headers["X-RateLimit-Remaining"]).toBe("75");
+      expect(headers["X-RateLimit-Reset"]).toBeDefined();
     });
 
-    it('should handle rate limit exceeded', () => {
+    it("should handle rate limit exceeded", () => {
       const result = {
         success: false,
         limit: 100,

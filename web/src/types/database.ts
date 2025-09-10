@@ -205,6 +205,47 @@ export interface Database {
           created_at?: string;
         };
       };
+      user_profiles: {
+        Row: {
+          id: string;
+          email: string;
+          status: "pending" | "approved" | "rejected";
+          role: "admin" | "user";
+          approved_by: string | null;
+          approved_at: string | null;
+          rejected_at: string | null;
+          rejection_reason: string | null;
+          notes: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id: string;
+          email: string;
+          status?: "pending" | "approved" | "rejected";
+          role?: "admin" | "user";
+          approved_by?: string | null;
+          approved_at?: string | null;
+          rejected_at?: string | null;
+          rejection_reason?: string | null;
+          notes?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          email?: string;
+          status?: "pending" | "approved" | "rejected";
+          role?: "admin" | "user";
+          approved_by?: string | null;
+          approved_at?: string | null;
+          rejected_at?: string | null;
+          rejection_reason?: string | null;
+          notes?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
     };
     Views: {
       v_domains_new_today: {
@@ -246,9 +287,46 @@ export interface Database {
           is_suspicious: boolean | null;
         };
       };
+      v_user_management: {
+        Row: {
+          id: string | null;
+          email: string | null;
+          status: string | null;
+          role: string | null;
+          approved_by: string | null;
+          approved_at: string | null;
+          rejected_at: string | null;
+          rejection_reason: string | null;
+          notes: string | null;
+          created_at: string | null;
+          updated_at: string | null;
+          approved_by_email: string | null;
+          status_display: string | null;
+        };
+      };
     };
     Functions: {
-      [_ in never]: never;
+      approve_user: {
+        Args: {
+          target_user_id: string;
+        };
+        Returns: undefined;
+      };
+      reject_user: {
+        Args: {
+          target_user_id: string;
+          reason?: string;
+        };
+        Returns: undefined;
+      };
+      is_user_approved: {
+        Args: {};
+        Returns: boolean;
+      };
+      is_user_admin: {
+        Args: {};
+        Returns: boolean;
+      };
     };
     Enums: {
       [_ in never]: never;

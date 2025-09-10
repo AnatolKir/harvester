@@ -57,7 +57,10 @@ describe("token bucket helpers", () => {
 
   test("waits with jitter when token unavailable, then acquires", async () => {
     const mocked = jest.requireMock("@upstash/ratelimit");
-    const queues: Map<string, Array<any>> = mocked.__queues as Map<string, Array<any>>;
+    const queues: Map<string, Array<any>> = mocked.__queues as Map<
+      string,
+      Array<any>
+    >;
 
     const now = Date.now();
     queues.set("global", [
@@ -73,5 +76,3 @@ describe("token bucket helpers", () => {
     expect(result.waitedMs).toBeLessThan(5000);
   });
 });
-
-

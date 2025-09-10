@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { withSecurity, AuthenticatedApiSecurity } from "@/lib/security/middleware";
+import {
+  withSecurity,
+  AuthenticatedApiSecurity,
+} from "@/lib/security/middleware";
 import { rateLimitMiddleware } from "@/lib/rate-limit/middleware";
 import { logRateLimitEvent } from "@/lib/rate-limit/monitoring";
 import { createClient } from "@/lib/supabase/server";
@@ -56,10 +59,11 @@ async function handleGet(request: NextRequest) {
     }
 
     const offset = (pagination.page! - 1) * pagination.limit!;
-    const { data: jobs, error, count } = await query.range(
-      offset,
-      offset + pagination.limit! - 1
-    );
+    const {
+      data: jobs,
+      error,
+      count,
+    } = await query.range(offset, offset + pagination.limit! - 1);
 
     if (error) {
       // If table not present yet, return empty data with TODO note
