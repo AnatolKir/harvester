@@ -41,12 +41,9 @@ export class CircuitBreaker {
 
   async getStatus(): Promise<CircuitStatus> {
     const k = keys(this.name);
-    const values = await redis.mget<string>(
-      k.state,
-      k.failures,
-      k.openedAt,
-      k.nextTryAt
-    );
+    const values = await redis.mget<
+      [string | null, string | null, string | null, string | null]
+    >(k.state, k.failures, k.openedAt, k.nextTryAt);
     const [state, failures, openedAt, nextTryAt] = values;
     return {
       state: (state as BreakerState) || "closed",
