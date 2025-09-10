@@ -324,7 +324,7 @@ export class InngestAdmin {
           status: "retry_scheduled",
           retry_after: new Date().toISOString(),
           updated_at: new Date().toISOString(),
-        })
+        } as unknown as never)
         .eq("id", dlqId);
 
       if (updateError) throw updateError;
