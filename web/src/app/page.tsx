@@ -25,9 +25,18 @@ export default async function Home() {
         .limit(5),
     ]);
 
-  const domainsToday = pipelineStats.data?.domains_day ?? 0;
-  const commentsToday = pipelineStats.data?.comments_day ?? 0;
-  const errorsToday = pipelineStats.data?.errors_day ?? 0;
+  const pipelineData = (
+    pipelineStats as {
+      data: {
+        domains_day: number;
+        comments_day: number;
+        errors_day: number;
+      } | null;
+    }
+  ).data;
+  const domainsToday = pipelineData?.domains_day ?? 0;
+  const commentsToday = pipelineData?.comments_day ?? 0;
+  const errorsToday = pipelineData?.errors_day ?? 0;
 
   return (
     <div className="space-y-8">
