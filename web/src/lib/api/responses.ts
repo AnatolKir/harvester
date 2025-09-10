@@ -1,14 +1,14 @@
 import { NextResponse } from "next/server";
 import { ZodError } from "zod";
 
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   success: boolean;
   data?: T;
   error?: string;
   errors?: Record<string, string[]>;
 }
 
-export interface PaginatedResponse<T = any> extends ApiResponse<T[]> {
+export interface PaginatedResponse<T = unknown> extends ApiResponse<T[]> {
   pagination: {
     page: number;
     limit: number;
@@ -19,7 +19,7 @@ export interface PaginatedResponse<T = any> extends ApiResponse<T[]> {
   };
 }
 
-export interface CursorPaginatedResponse<T = any> extends ApiResponse<T[]> {
+export interface CursorPaginatedResponse<T = unknown> extends ApiResponse<T[]> {
   pagination: {
     cursor: string | null;
     nextCursor: string | null;
@@ -89,7 +89,7 @@ export function createErrorResponse(
 export function createValidationErrorResponse(
   error: ZodError
 ): NextResponse<ApiResponse> {
-  const errors = error.errors.reduce(
+  const errors = error.issues.reduce(
     (acc, err) => {
       const path = err.path.join(".");
       if (!acc[path]) acc[path] = [];
@@ -109,7 +109,7 @@ export function createValidationErrorResponse(
   );
 }
 
-export function withErrorHandling<T extends any[], R>(
+export function withErrorHandling<T extends unknown[], R>(
   handler: (...args: T) => Promise<R>
 ) {
   return async (...args: T): Promise<R | NextResponse<ApiResponse>> => {
