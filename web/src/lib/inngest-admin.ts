@@ -40,7 +40,7 @@ export class InngestAdmin {
       const { data, error } = await supabase.rpc("get_job_metrics", {
         job_type_filter: jobType || null,
         hours_back: hoursBack,
-      });
+      } as unknown as never);
 
       if (error) throw error;
 
