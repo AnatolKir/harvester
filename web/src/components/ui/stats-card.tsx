@@ -27,27 +27,34 @@ export function StatsCard({
   trend,
 }: StatsCardProps) {
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+    <Card className="card-hover border-border/50 glass-hover relative overflow-hidden">
+      <div className="from-primary/5 absolute inset-0 bg-gradient-to-br via-transparent to-transparent opacity-50" />
+      <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium">{title}</CardTitle>
-        {icon}
+        <div className="bg-accent/50 rounded-lg p-2">{icon}</div>
       </CardHeader>
-      <CardContent>
-        <div className="text-2xl font-bold">{formatNumber(value)}</div>
+      <CardContent className="relative">
+        <div className="animate-fade-in text-3xl font-bold tracking-tight">
+          {formatNumber(value)}
+        </div>
         {description && (
-          <CardDescription className="text-muted-foreground text-xs">
+          <CardDescription className="text-muted-foreground mt-1 text-xs">
             {description}
           </CardDescription>
         )}
         {trend && (
-          <div className="mt-2 flex items-center text-xs">
+          <div className="mt-3 flex items-center gap-1 text-xs">
             <span
-              className={trend.isPositive ? "text-green-600" : "text-red-600"}
+              className={`rounded-full px-2 py-0.5 font-semibold ${
+                trend.isPositive
+                  ? "bg-green-500/10 text-green-600 dark:text-green-400"
+                  : "bg-red-500/10 text-red-600 dark:text-red-400"
+              }`}
             >
-              {trend.isPositive ? "+" : ""}
+              {trend.isPositive ? "↑" : "↓"}
               {trend.value}%
             </span>
-            <span className="text-muted-foreground ml-1">{trend.label}</span>
+            <span className="text-muted-foreground">{trend.label}</span>
           </div>
         )}
       </CardContent>

@@ -177,14 +177,18 @@ export function DomainTableClient({ initialDomains }: Props) {
   ];
 
   return (
-    <div className="space-y-8">
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Domains</h1>
-          <p className="text-muted-foreground">
+    <div className="animate-fade-in space-y-8">
+      <div className="from-primary/5 to-accent/5 glass relative overflow-hidden rounded-xl bg-gradient-to-br via-transparent p-8">
+        <div className="relative z-10">
+          <h1 className="gradient-text-subtle text-4xl font-bold tracking-tight">
+            Domains
+          </h1>
+          <p className="text-muted-foreground mt-2">
             All domains discovered from TikTok comments and promotional content.
           </p>
         </div>
+        <div className="bg-primary/5 absolute -top-20 -right-20 h-40 w-40 rounded-full blur-3xl" />
+        <div className="bg-accent/5 absolute -bottom-10 -left-20 h-40 w-40 rounded-full blur-3xl" />
       </div>
 
       <div className="flex flex-col gap-4 md:flex-row md:items-center">
@@ -193,7 +197,7 @@ export function DomainTableClient({ initialDomains }: Props) {
             placeholder="Search domains..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-3"
+            className="glass-hover border-border/50 pl-3"
           />
         </div>
         <div className="flex gap-2">
@@ -224,33 +228,45 @@ export function DomainTableClient({ initialDomains }: Props) {
       </div>
 
       <div className="grid gap-4 md:grid-cols-4">
-        <div className="bg-card rounded-lg border p-4">
-          <div className="text-2xl font-bold">{filteredDomains.length}</div>
-          <p className="text-muted-foreground text-sm">Filtered domains</p>
-        </div>
-        <div className="bg-card rounded-lg border p-4">
-          <div className="text-2xl font-bold">
-            {
-              filteredDomains.filter(
-                (d) =>
-                  new Date(d.first_seen).toDateString() ===
-                  new Date().toDateString()
-              ).length
-            }
+        <div className="bg-card border-border/50 card-hover glass-hover relative overflow-hidden rounded-xl border p-4">
+          <div className="from-chart-1/10 absolute inset-0 bg-gradient-to-br to-transparent" />
+          <div className="relative">
+            <div className="text-2xl font-bold">{filteredDomains.length}</div>
+            <p className="text-muted-foreground text-sm">Filtered domains</p>
           </div>
-          <p className="text-muted-foreground text-sm">New today</p>
         </div>
-        <div className="bg-card rounded-lg border p-4">
-          <div className="text-2xl font-bold">
-            {filteredDomains.reduce((sum, d) => sum + d.total_mentions, 0)}
+        <div className="bg-card border-border/50 card-hover glass-hover relative overflow-hidden rounded-xl border p-4">
+          <div className="from-chart-2/10 absolute inset-0 bg-gradient-to-br to-transparent" />
+          <div className="relative">
+            <div className="text-2xl font-bold">
+              {
+                filteredDomains.filter(
+                  (d) =>
+                    new Date(d.first_seen).toDateString() ===
+                    new Date().toDateString()
+                ).length
+              }
+            </div>
+            <p className="text-muted-foreground text-sm">New today</p>
           </div>
-          <p className="text-muted-foreground text-sm">Total mentions</p>
         </div>
-        <div className="bg-card rounded-lg border p-4">
-          <div className="text-2xl font-bold">
-            {filteredDomains.filter((d) => d.total_mentions > 50).length}
+        <div className="bg-card border-border/50 card-hover glass-hover relative overflow-hidden rounded-xl border p-4">
+          <div className="from-chart-3/10 absolute inset-0 bg-gradient-to-br to-transparent" />
+          <div className="relative">
+            <div className="text-2xl font-bold">
+              {filteredDomains.reduce((sum, d) => sum + d.total_mentions, 0)}
+            </div>
+            <p className="text-muted-foreground text-sm">Total mentions</p>
           </div>
-          <p className="text-muted-foreground text-sm">High activity</p>
+        </div>
+        <div className="bg-card border-border/50 card-hover glass-hover relative overflow-hidden rounded-xl border p-4">
+          <div className="from-destructive/10 absolute inset-0 bg-gradient-to-br to-transparent" />
+          <div className="relative">
+            <div className="text-2xl font-bold">
+              {filteredDomains.filter((d) => d.total_mentions > 50).length}
+            </div>
+            <p className="text-muted-foreground text-sm">High activity</p>
+          </div>
         </div>
       </div>
 

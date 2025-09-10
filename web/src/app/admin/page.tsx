@@ -55,29 +55,59 @@ export default async function AdminPage() {
   const failed24h = Number((sys["failed_jobs_24h"] as number | undefined) ?? 0);
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Admin · Inngest</h1>
-        <p className="text-muted-foreground">
-          Monitor jobs and trigger maintenance.
-        </p>
+    <div className="animate-fade-in space-y-8">
+      <div className="from-primary/5 to-accent/5 glass relative overflow-hidden rounded-xl bg-gradient-to-br via-transparent p-8">
+        <div className="relative z-10">
+          <h1 className="gradient-text-subtle text-4xl font-bold tracking-tight">
+            Admin · Inngest
+          </h1>
+          <p className="text-muted-foreground mt-2">
+            Monitor jobs and trigger maintenance.
+          </p>
+        </div>
+        <div className="bg-primary/5 absolute -top-20 -right-20 h-40 w-40 rounded-full blur-3xl" />
+        <div className="bg-accent/5 absolute -bottom-10 -left-20 h-40 w-40 rounded-full blur-3xl" />
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader>
+        <Card className="card-hover border-border/50 glass-hover relative overflow-hidden">
+          <div className="from-chart-1/10 absolute inset-0 bg-gradient-to-br to-transparent" />
+          <CardHeader className="relative">
             <CardTitle>System Health</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2 text-sm">
-            <div>Kill Switch: {String(killSwitchActive)}</div>
-            <div>Jobs 24h: {jobs24h}</div>
-            <div>Completed 24h: {completed24h}</div>
-            <div>Failed 24h: {failed24h}</div>
+          <CardContent className="relative space-y-2 text-sm">
+            <div className="bg-muted/50 flex justify-between rounded-lg p-2">
+              <span>Kill Switch:</span>
+              <span
+                className={`font-mono font-semibold ${killSwitchActive ? "text-destructive" : "text-green-600"}`}
+              >
+                {String(killSwitchActive)}
+              </span>
+            </div>
+            <div className="hover:bg-muted/50 flex justify-between rounded-lg p-2 transition-colors">
+              <span>Jobs 24h:</span>
+              <span className="font-mono font-semibold">{jobs24h}</span>
+            </div>
+            <div className="hover:bg-muted/50 flex justify-between rounded-lg p-2 transition-colors">
+              <span>Completed 24h:</span>
+              <span className="font-mono font-semibold text-green-600">
+                {completed24h}
+              </span>
+            </div>
+            <div className="hover:bg-muted/50 flex justify-between rounded-lg p-2 transition-colors">
+              <span>Failed 24h:</span>
+              <span
+                className={`font-mono font-semibold ${failed24h > 0 ? "text-destructive" : "text-muted-foreground"}`}
+              >
+                {failed24h}
+              </span>
+            </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
+        <Card className="card-hover border-border/50 glass-hover relative overflow-hidden">
+          <div className="from-chart-2/10 absolute inset-0 bg-gradient-to-br to-transparent" />
+          <CardHeader className="relative">
             <CardTitle>Quick Actions</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-wrap gap-2">
@@ -155,8 +185,9 @@ export default async function AdminPage() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
+        <Card className="card-hover border-border/50 glass-hover relative overflow-hidden">
+          <div className="from-chart-3/10 absolute inset-0 bg-gradient-to-br to-transparent" />
+          <CardHeader className="relative">
             <CardTitle>Active Jobs</CardTitle>
           </CardHeader>
           <CardContent className="text-sm">
@@ -180,8 +211,9 @@ export default async function AdminPage() {
         </Card>
       </div>
 
-      <Card>
-        <CardHeader>
+      <Card className="card-hover border-border/50 glass-hover relative overflow-hidden">
+        <div className="from-primary/5 absolute inset-0 bg-gradient-to-br via-transparent to-transparent" />
+        <CardHeader className="relative">
           <CardTitle>Recent Logs</CardTitle>
         </CardHeader>
         <CardContent className="space-y-1 text-sm">

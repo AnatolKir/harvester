@@ -47,13 +47,19 @@ export default async function Home() {
   const errorsToday = pipelineData?.errors_day ?? 0;
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-muted-foreground">
-          Track domains discovered from TikTok comments and promoted content.
-        </p>
+    <div className="animate-fade-in space-y-8">
+      {/* Header with gradient */}
+      <div className="from-primary/5 to-accent/5 glass relative overflow-hidden rounded-xl bg-gradient-to-br via-transparent p-8">
+        <div className="relative z-10">
+          <h1 className="gradient-text-subtle text-4xl font-bold tracking-tight">
+            Dashboard
+          </h1>
+          <p className="text-muted-foreground mt-2">
+            Track domains discovered from TikTok comments and promoted content.
+          </p>
+        </div>
+        <div className="bg-primary/5 absolute -top-20 -right-20 h-40 w-40 rounded-full blur-3xl" />
+        <div className="bg-accent/5 absolute -bottom-10 -left-20 h-40 w-40 rounded-full blur-3xl" />
       </div>
 
       {/* Stats Cards */}
@@ -96,13 +102,14 @@ export default async function Home() {
 
       {/* Recent Activity */}
       <div className="grid gap-4 md:grid-cols-2">
-        <div className="bg-card rounded-lg border p-6">
-          <h3 className="mb-4 font-semibold">Recent Domains</h3>
-          <div className="space-y-4">
-            {(recentDomains.data || []).map((item) => (
+        <div className="bg-card card-hover glass-hover rounded-xl border p-6">
+          <h3 className="mb-4 text-lg font-semibold">Recent Domains</h3>
+          <div className="space-y-3">
+            {(recentDomains.data || []).map((item, idx) => (
               <div
                 key={item.domain}
-                className="flex items-center justify-between"
+                className="hover:bg-accent/50 animate-fade-in flex items-center justify-between rounded-lg p-3 transition-colors"
+                style={{ animationDelay: `${idx * 50}ms` }}
               >
                 <div>
                   <p className="font-medium">{item.domain}</p>
@@ -110,32 +117,37 @@ export default async function Home() {
                     Last seen {new Date(item.last_seen).toLocaleString()}
                   </p>
                 </div>
-                <div className="text-muted-foreground text-sm">
-                  {item.total_mentions} mentions
+                <div className="flex items-center gap-2">
+                  <span className="status-dot bg-chart-1" />
+                  <span className="text-muted-foreground font-mono text-sm">
+                    {item.total_mentions} mentions
+                  </span>
                 </div>
               </div>
             ))}
           </div>
         </div>
 
-        <div className="bg-card rounded-lg border p-6">
-          <h3 className="mb-4 font-semibold">Processing Status</h3>
+        <div className="bg-card card-hover glass-hover rounded-xl border p-6">
+          <h3 className="mb-4 text-lg font-semibold">Processing Status</h3>
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <span>Domains Today</span>
-              <span className="text-muted-foreground text-sm">
+            <div className="from-chart-1/10 flex items-center justify-between rounded-lg bg-gradient-to-r to-transparent p-3">
+              <span className="font-medium">Domains Today</span>
+              <span className="text-foreground font-mono font-semibold">
                 {domainsToday}
               </span>
             </div>
-            <div className="flex items-center justify-between">
-              <span>Comments Today</span>
-              <span className="text-muted-foreground text-sm">
+            <div className="from-chart-2/10 flex items-center justify-between rounded-lg bg-gradient-to-r to-transparent p-3">
+              <span className="font-medium">Comments Today</span>
+              <span className="text-foreground font-mono font-semibold">
                 {commentsToday}
               </span>
             </div>
-            <div className="flex items-center justify-between">
-              <span>Errors Today</span>
-              <span className="text-muted-foreground text-sm">
+            <div className="from-destructive/10 flex items-center justify-between rounded-lg bg-gradient-to-r to-transparent p-3">
+              <span className="font-medium">Errors Today</span>
+              <span
+                className={`font-mono font-semibold ${errorsToday > 0 ? "text-destructive" : "text-foreground"}`}
+              >
                 {errorsToday}
               </span>
             </div>
