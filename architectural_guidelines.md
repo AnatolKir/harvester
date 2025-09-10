@@ -5,6 +5,55 @@
 - The former Playwright worker path is considered legacy and retained only for rollback (see `worker/README_LEGACY.md`).
 - Environment variables include MCP_BASE_URL and BRIGHTDATA_MCP_API_KEY (alias: API_TOKEN).
 
+# Cloud Deployment – 2025-09 hardening snapshot
+
+The current production setup runs entirely in the cloud (no local dependencies):
+
+- Web (Next.js 15) on Vercel, project root: `web/`.
+- Jobs on Inngest via the `/api/inngest` serve endpoint (Node runtime).
+- Database on Supabase; Redis (rate limits) on Upstash.
+- Optional Python worker on Railway is retained for contingency and advanced scraping, but the primary pipeline is Inngest‑based.
+
+Key decisions and guardrails:
+
+- Next.js config:
+  - `serverExternalPackages` used; `experimental.externalDir=true` enabled for monorepo‑safe imports.
+  - `outputFileTracingRoot` pinned to repo root to silence monorepo warnings.
+  - TypeScript strict build enforced (`ignoreBuildErrors=false`).
+  - Route handlers that import Node APIs declare `export const runtime = 'nodejs'` and `export const dynamic = 'force-dynamic'` where static analysis caused build‑time side effects.
+
+- Supabase usage (TypeScript hygiene):
+  - Always type result sets with `.returns<...>()` immediately after `.select(...)`.
+  - Guard all `.single()`/`.maybeSingle()` before field access.
+  - For `.rpc(...)` without generated types: cast args `as unknown as never` and provide minimal result typing with `.returns<...>()`.
+  - Server client creation accepts `SUPABASE_URL` fallback: `(SUPABASE_URL || NEXT_PUBLIC_SUPABASE_URL)`.
+
+- App Router typing:
+  - Pages use `searchParams?: Promise<Record<string, string | string[] | undefined>>` and await once at the top.
+  - Route handlers accept `{ params: Promise<{ ... }>; }` and await once.
+
+- Inngest integration:
+  - Serve endpoint is `GET/POST /api/inngest` in `web/src/app/api/inngest/route.ts`.
+  - Vercel integration is used with path `/api/inngest`; custom domain points to `https://data.highlyeducated.com`.
+  - Environment keys: `INNGEST_SIGNING_KEY` (serve introspection) and `INNGEST_EVENT_KEY` (explicitly wired in `web/inngest/client.ts`).
+
+- Concurrency & schedules (initial production defaults):
+  - Comment harvesting: 30
+  - Domain extraction from comments: 50
+  - HTTP enrichment: 10
+  - DNS/WHOIS enrichment: 10
+  - Discovery backfill/manual: on demand; scheduled discovery: `*/10 * * * *`
+  - Materialized views refresh: `*/5 * * * *`
+  - Health check: `*/5 * * * *`; maintenance cleanup: `0 2 * * 0`
+
+- Global rate limits (Upstash token buckets / env):
+  - `DISCOVERY_RPM=30`, `COMMENTS_RPM=60`, `HTTP_ENRICH_RPM=30`
+  - Raising Inngest concurrency above token limits won’t increase throughput; scale tokens first.
+
+- Safety:
+  - Kill switch stored in `system_config` (`key=kill_switch_active`).
+  - Admin API routes are Node runtime and check for presence of Supabase admin envs; they return safe fallbacks during page‑data collection.
+
 # Architectural Guidelines – TikTok Domain Harvester
 
 ## Philosophy

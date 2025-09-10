@@ -72,7 +72,7 @@ export default function ResetPasswordPage() {
             <Input
               id="email"
               type="email"
-              placeholder="rick@giantpanda.com"
+              placeholder="Enter your email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
