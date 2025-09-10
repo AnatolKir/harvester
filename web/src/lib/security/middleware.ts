@@ -99,7 +99,9 @@ export function withSecurity<T extends unknown[]>(
         if ("error" in (rl as Record<string, unknown>)) {
           return rl as unknown as NextResponse;
         }
-        const rawHeaders = (rl as { headers: Record<string, unknown> }).headers;
+        const rawHeaders = (
+          rl as unknown as { headers: Record<string, unknown> }
+        ).headers;
         rateLimitHeaders = Object.fromEntries(
           Object.entries(rawHeaders).map(([k, v]) => [k, String(v)])
         );
