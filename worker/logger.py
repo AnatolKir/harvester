@@ -4,7 +4,8 @@ Logging configuration for the worker
 
 import sys
 import structlog
-from structlog.processors import JSONRenderer, ConsoleRenderer
+from structlog.processors import JSONRenderer
+from structlog import dev as structlog_dev
 from structlog.stdlib import add_log_level, filter_by_level
 
 from config import config
@@ -17,7 +18,7 @@ def setup_logging():
     if config.log_format == "json":
         renderer = JSONRenderer()
     else:
-        renderer = ConsoleRenderer()
+        renderer = structlog_dev.ConsoleRenderer()
     
     # Common processors
     processors = [
@@ -27,7 +28,6 @@ def setup_logging():
         structlog.processors.TimeStamper(fmt="iso"),
         structlog.processors.StackInfoRenderer(),
         structlog.processors.format_exc_info,
-        structlog.processors.UnicodeDecoder(),
         structlog.processors.CallsiteParameterAdder(
             parameters=[
                 structlog.processors.CallsiteParameter.FILENAME,
