@@ -1,4 +1,4 @@
-import { getServerEnv } from "../../lib/env";
+import { getServerEnv } from "../../../lib/env";
 
 export function matviewsEnabled(): boolean {
   try {
