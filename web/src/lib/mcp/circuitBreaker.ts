@@ -104,7 +104,7 @@ export class CircuitBreaker {
 
   async reset(): Promise<void> {
     const k = keys(this.name);
-    await redis.mdel(k.state, k.failures, k.openedAt, k.nextTryAt);
+    await redis.del(k.state, k.failures, k.openedAt, k.nextTryAt);
   }
 }
 
