@@ -16,9 +16,14 @@ export function getAllowedAdminOrigins(): string[] {
 }
 
 export function withAdminGuard(handler: AdminGuardHandler) {
+  const hasAuthEnv = Boolean(
+    process.env.NEXT_PUBLIC_SUPABASE_URL &&
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  );
   return withSecurity(handler, {
     ...AuthenticatedApiSecurity,
-    requireAdmin: true,
+    requireAuth: hasAuthEnv,
+    requireAdmin: hasAuthEnv,
     allowedOrigins: getAllowedAdminOrigins(),
   });
 }
