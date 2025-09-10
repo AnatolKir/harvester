@@ -1,0 +1,50 @@
+# Node modules and build artifacts
+node_modules/
+.next/
+out/
+dist/
+build/
+
+# Web directory (we only need worker)
+web/
+inngest/
+supabase/
+scripts/
+prompts/
+mcp-gateway/
+reports/
+docs/
+
+# Git and CI
+.git/
+.github/
+.husky/
+
+# Environment files (these should be set in Railway)
+.env
+.env.*
+!worker/.env.example
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Documentation
+*.md
+!worker/README.md
+
+# Misc
+.DS_Store
+Thumbs.db
+*.log
