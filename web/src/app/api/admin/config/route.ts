@@ -8,7 +8,7 @@ import { withAdminGuard, auditAdminAction } from "@/lib/security/admin";
 export const GET = withAdminGuard(async (_request: NextRequest) => {
   try {
     const hasAdminSupabase = Boolean(
-      process.env.NEXT_PUBLIC_SUPABASE_URL &&
+      (process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL) &&
         process.env.SUPABASE_SERVICE_ROLE_KEY
     );
     const config = hasAdminSupabase ? await InngestAdmin.getSystemConfig() : [];
@@ -33,7 +33,7 @@ export const GET = withAdminGuard(async (_request: NextRequest) => {
 export const POST = withAdminGuard(async (request: NextRequest) => {
   try {
     if (
-      !process.env.NEXT_PUBLIC_SUPABASE_URL ||
+      !(process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL) ||
       !process.env.SUPABASE_SERVICE_ROLE_KEY
     ) {
       return NextResponse.json(

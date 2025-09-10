@@ -6,7 +6,7 @@ import { withAdminGuard, auditAdminAction } from "@/lib/security/admin";
 export const GET = withAdminGuard(async (request: NextRequest) => {
   try {
     if (
-      !process.env.NEXT_PUBLIC_SUPABASE_URL ||
+      !(process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL) ||
       !process.env.SUPABASE_SERVICE_ROLE_KEY
     ) {
       return NextResponse.json({ success: true, data: [] });
@@ -36,7 +36,7 @@ export const GET = withAdminGuard(async (request: NextRequest) => {
 export const POST = withAdminGuard(async (request: NextRequest) => {
   try {
     if (
-      !process.env.NEXT_PUBLIC_SUPABASE_URL ||
+      !(process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL) ||
       !process.env.SUPABASE_SERVICE_ROLE_KEY
     ) {
       return NextResponse.json(
@@ -87,7 +87,7 @@ export const POST = withAdminGuard(async (request: NextRequest) => {
 export const DELETE = withAdminGuard(async (request: NextRequest) => {
   try {
     if (
-      !process.env.NEXT_PUBLIC_SUPABASE_URL ||
+      !(process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL) ||
       !process.env.SUPABASE_SERVICE_ROLE_KEY
     ) {
       return NextResponse.json(

@@ -13,7 +13,7 @@ export const GET = withAdminGuard(async (request: NextRequest) => {
     const hoursBack = parseInt(url.searchParams.get("hours") || "24");
 
     const hasAdminSupabase = Boolean(
-      process.env.NEXT_PUBLIC_SUPABASE_URL &&
+      (process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL) &&
         process.env.SUPABASE_SERVICE_ROLE_KEY
     );
 
