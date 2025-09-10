@@ -22,7 +22,15 @@ export default async function Home() {
         .from("v_domains_overview")
         .select("domain, total_mentions, first_seen, last_seen")
         .order("last_seen", { ascending: false })
-        .limit(5),
+        .limit(5)
+        .returns<
+          {
+            domain: string;
+            total_mentions: number;
+            first_seen: string;
+            last_seen: string;
+          }[]
+        >(),
     ]);
 
   const pipelineData = (
