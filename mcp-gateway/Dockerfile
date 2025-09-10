@@ -53,8 +53,8 @@ FROM node:${NODE_VERSION}-alpine${ALPINE_VERSION} AS production
 
 # Add metadata
 LABEL maintainer="MCP Gateway Team"
-LABEL version="1.0.0"
-LABEL description="MCP Gateway server for translating custom tools to BrightData's standard MCP service"
+LABEL version="1.0.1"
+LABEL description="MCP Gateway server with Inngest integration for job scheduling"
 
 # Install runtime dependencies only
 RUN apk add --no-cache \
