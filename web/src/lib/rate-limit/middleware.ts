@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { apiLimiter, authApiLimiter, checkRateLimit } from "./limiter";
+import {
+  apiLimiter,
+  authApiLimiter,
+  checkRateLimitWithLimiter,
+} from "./limiter";
 
 export interface RateLimitHeaders {
   "X-RateLimit-Limit": string;
@@ -42,7 +46,7 @@ export async function rateLimitMiddleware(
 
   const limiter = options?.authenticated ? authApiLimiter : apiLimiter;
 
-  const { success, limit, remaining, reset } = await checkRateLimit(
+  const { success, limit, remaining, reset } = await checkRateLimitWithLimiter(
     limiter,
     identifier
   );

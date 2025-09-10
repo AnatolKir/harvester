@@ -1,4 +1,8 @@
-import { scraperLimiter, workerLimiter, checkRateLimit } from "./limiter";
+import {
+  scraperLimiter,
+  workerLimiter,
+  checkRateLimitWithLimiter,
+} from "./limiter";
 import { logRateLimitEvent } from "./monitoring";
 
 export interface WorkerRateLimitConfig {
@@ -43,7 +47,7 @@ export class WorkerRateLimiter {
       }
     }
 
-    const result = await checkRateLimit(workerLimiter, workerId);
+    const result = await checkRateLimitWithLimiter(workerLimiter, workerId);
 
     await logRateLimitEvent({
       identifier: workerId,
@@ -111,6 +115,7 @@ export class WorkerRateLimiter {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private isRateLimitError(error: any): boolean {
     return (
       error?.status === 429 ||
@@ -151,7 +156,7 @@ export class WorkerRateLimiter {
 export async function checkTikTokScraperLimit(
   identifier: string
 ): Promise<boolean> {
-  const result = await checkRateLimit(scraperLimiter, identifier);
+  const result = await checkRateLimitWithLimiter(scraperLimiter, identifier);
 
   await logRateLimitEvent({
     identifier,

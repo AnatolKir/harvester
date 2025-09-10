@@ -73,7 +73,7 @@ export async function checkRateLimit(
       redis,
       limiter: Ratelimit.tokenBucket(
         config.limit,
-        config.interval,
+        config.interval as Parameters<typeof Ratelimit.tokenBucket>[1],
         config.limit
       ),
       analytics: true,

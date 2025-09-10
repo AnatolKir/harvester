@@ -50,7 +50,7 @@ export async function middleware(request: NextRequest) {
 
   // Define route patterns
   const isAuthPage = pathname.startsWith("/auth");
-  const isPublicPage = pathname === "/" || pathname.startsWith("/public");
+  const isPublicPage = pathname.startsWith("/public");
   const isApiRoute = pathname.startsWith("/api");
   const isProtectedRoute = !isAuthPage && !isPublicPage && !isApiRoute;
 
@@ -65,7 +65,7 @@ export async function middleware(request: NextRequest) {
   if (user && isAuthPage) {
     // Redirect authenticated users away from auth pages
     const redirectTo = request.nextUrl.searchParams.get("redirectTo");
-    const redirectUrl = new URL(redirectTo || "/dashboard", request.url);
+    const redirectUrl = new URL(redirectTo || "/", request.url);
     return withHeaders(NextResponse.redirect(redirectUrl));
   }
 
