@@ -66,18 +66,7 @@ export default async function VideosPage({
   // Build base query against video table for filtering, sorting, cursoring
   let query = supabase
     .from("video")
-    .select("id, video_id, url, created_at, last_scraped_at, scrape_status")
-    .returns<
-      Pick<
-        VideoRow,
-        | "id"
-        | "video_id"
-        | "url"
-        | "created_at"
-        | "last_scraped_at"
-        | "scrape_status"
-      >[]
-    >();
+    .select("id, video_id, url, created_at, last_scraped_at, scrape_status");
 
   if (search) {
     // Search across common fields
@@ -107,7 +96,18 @@ export default async function VideosPage({
 
   query = query.order(sort, { ascending: dir === "asc" }).limit(limitNum + 1);
 
-  const { data: videosRaw, error } = await query;
+  const { data: videosRaw, error } =
+    await query.returns<
+      Pick<
+        VideoRow,
+        | "id"
+        | "video_id"
+        | "url"
+        | "created_at"
+        | "last_scraped_at"
+        | "scrape_status"
+      >[]
+    >();
   if (error) {
     throw new Error(`Failed to load videos: ${error.message}`);
   }

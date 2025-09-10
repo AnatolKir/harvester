@@ -154,8 +154,7 @@ export default async function AdminLogsPage({
   let query = supabase
     .from("system_logs")
     .select("id,event_type,level,message,job_id,metadata,created_at")
-    .gte("created_at", sinceIso)
-    .returns<SystemLogRow[]>();
+    .gte("created_at", sinceIso);
 
   if (levelParam && levelParam !== "all") {
     query = query.eq("level", levelParam);
@@ -177,7 +176,8 @@ export default async function AdminLogsPage({
 
   query = query.order("created_at", { ascending: false }).limit(limit + 1);
 
-  const { data: logsRaw, error: logsError } = await query;
+  const { data: logsRaw, error: logsError } =
+    await query.returns<SystemLogRow[]>();
   if (logsError) {
     throw new Error(`Failed to load logs: ${logsError.message}`);
   }
