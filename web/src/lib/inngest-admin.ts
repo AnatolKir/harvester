@@ -269,7 +269,7 @@ export class InngestAdmin {
           value,
           description,
           updated_at: new Date().toISOString(),
-        },
+        } as unknown as never,
         {
           onConflict: "key",
         }
