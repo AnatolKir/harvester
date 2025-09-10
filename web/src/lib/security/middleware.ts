@@ -379,8 +379,8 @@ function createSecurityErrorResponse(
   SecurityUtils.Headers.addSecurityHeaders(response);
 
   if (metadata?.requestId) {
-    response.headers.set("X-Request-ID", metadata.requestId);
-    response.headers.set("X-Correlation-ID", metadata.requestId);
+    response.headers.set("X-Request-ID", String(metadata.requestId));
+    response.headers.set("X-Correlation-ID", String(metadata.requestId));
   }
 
   return response;
