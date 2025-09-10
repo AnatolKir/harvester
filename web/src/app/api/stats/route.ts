@@ -203,8 +203,19 @@ async function handleStatsGet(_request: NextRequest) {
     mentions: number;
   }> = [];
 
-  if (timeSeriesResult.status === "fulfilled" && timeSeriesResult.value.data) {
-    timeSeriesData = timeSeriesResult.value.data;
+  if (timeSeriesResult.status === "fulfilled") {
+    const tsValue = timeSeriesResult.value as unknown;
+    if (
+      tsValue &&
+      typeof tsValue === "object" &&
+      Array.isArray((tsValue as { data?: unknown }).data)
+    ) {
+      timeSeriesData = (
+        tsValue as {
+          data: { date: string; domains: number; mentions: number }[];
+        }
+      ).data;
+    }
   } else {
     // Fallback: generate last 7 days with manual queries
     const dates = Array.from({ length: 7 }, (_, i) => {
