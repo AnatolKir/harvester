@@ -140,6 +140,7 @@ export class Server {
           health: '/health',
           mcp: '/mcp',
           metrics: '/metrics',
+          inngest: '/api/inngest',
         },
       });
     });
