@@ -297,15 +297,16 @@ export function withValidation<T, TRequest extends NextRequest>(
         if (request.method === "GET") {
           // Parse query parameters
           const searchParams = request.nextUrl.searchParams;
-          data = {};
+          const queryObj: Record<string, unknown> = {};
           for (const [key, value] of searchParams.entries()) {
             // Apply input validation to search parameters
             if (key === "search") {
-              data[key] = SecurityUtils.Input.validateSearchQuery(value);
+              queryObj[key] = SecurityUtils.Input.validateSearchQuery(value);
             } else {
-              data[key] = value;
+              queryObj[key] = value;
             }
           }
+          data = queryObj;
         } else {
           // Parse JSON body for POST/PUT/PATCH
           data = await request.json();
