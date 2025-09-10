@@ -280,14 +280,14 @@ export function MonitoringDashboard() {
                 {getStatusBadge(health.components.jobs?.status || "unknown")}
                 {health.components.jobs?.details && (
                   <div className="text-muted-foreground space-y-1 text-xs">
-                    {health.components.jobs.details.recentJobCount && (
+                    {(health.components.jobs.details as any).recentJobCount && (
                       <p>
-                        Recent: {health.components.jobs.details.recentJobCount}
+                        Recent: {(health.components.jobs.details as any).recentJobCount}
                       </p>
                     )}
-                    {health.components.jobs.details.failureRate && (
+                    {(health.components.jobs.details as any).failureRate && (
                       <p>
-                        Failure: {health.components.jobs.details.failureRate}
+                        Failure: {(health.components.jobs.details as any).failureRate}
                       </p>
                     )}
                   </div>

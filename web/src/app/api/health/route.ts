@@ -269,10 +269,12 @@ export async function GET() {
     ]);
 
     // Determine overall health status
-    const components = { database, worker, jobs };
-    if (redis) {
-      components.redis = redis;
-    }
+    const components: HealthCheckResponse["components"] = {
+      database,
+      worker,
+      jobs,
+      ...(redis ? { redis } : {}),
+    };
 
     const statuses = Object.values(components).map((c) => c.status);
     let overall: "healthy" | "degraded" | "unhealthy" = "healthy";
