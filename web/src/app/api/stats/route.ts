@@ -2,7 +2,6 @@ import { NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import {
   createSuccessResponse,
-  createErrorResponse,
   withErrorHandling,
   addRateLimitHeaders,
 } from "@/lib/api";
@@ -32,7 +31,7 @@ interface DashboardStats {
   }>;
 }
 
-async function handleStatsGet(request: NextRequest) {
+async function handleStatsGet(_request: NextRequest) {
   const supabase = await createClient();
 
   // Get today's date for filtering
@@ -71,7 +70,11 @@ async function handleStatsGet(request: NextRequest) {
       .gte("last_scraped_at", sevenDaysAgo.toISOString()),
 
     // Trending domains via canonical view
-    supabase.from("v_domains_trending").select("*").order("mentions_7d", { ascending: false }).limit(5),
+    supabase
+      .from("v_domains_trending")
+      .select("*")
+      .order("mentions_7d", { ascending: false })
+      .limit(5),
 
     // Most recent job log entry
     supabase
@@ -81,9 +84,7 @@ async function handleStatsGet(request: NextRequest) {
       .limit(1),
 
     // Time series data for the last 7 days
-    supabase.rpc("get_stats_time_series", {
-      p_days: 7,
-    }),
+    supabase.rpc("get_stats_time_series", { p_days: 7 } as unknown as never),
   ]);
 
   // Handle results and fallbacks
@@ -114,7 +115,9 @@ async function handleStatsGet(request: NextRequest) {
   }> = [];
 
   if (trendingResult.status === "fulfilled" && trendingResult.value.data) {
-    trending = trendingResult.value.data.map((item: any) => ({
+    type TrendingRow = { domain?: string; mentions_7d?: number };
+    const rows = trendingResult.value.data as TrendingRow[];
+    trending = rows.map((item) => ({
       domain: item.domain || "",
       growth: 0,
       mentions: item.mentions_7d || 0,
@@ -128,7 +131,13 @@ async function handleStatsGet(request: NextRequest) {
       .limit(5);
 
     if (fallbackTrending.data) {
-      trending = fallbackTrending.data.map((item: any) => ({
+      type FallbackRow = {
+        domain: string;
+        total_mentions?: number;
+        unique_videos?: number;
+      };
+      const rows = fallbackTrending.data as FallbackRow[];
+      trending = rows.map((item) => ({
         domain: item.domain,
         growth: 0,
         mentions: item.total_mentions || 0,
@@ -149,13 +158,32 @@ async function handleStatsGet(request: NextRequest) {
     recentJobResult.status === "fulfilled" &&
     recentJobResult.value.data?.[0]
   ) {
-    const job = recentJobResult.value.data[0];
+    type JobRow = {
+      started_at: string | null;
+      status: "pending" | "processing" | "completed" | "failed" | string;
+      metadata?: {
+        videosProcessed?: number;
+        commentsHarvested?: number;
+        domainsExtracted?: number;
+      } | null;
+    };
+    const job = recentJobResult.value.data[0] as JobRow;
+    type Status = "pending" | "processing" | "completed" | "failed";
+    const allowed: ReadonlyArray<Status> = [
+      "pending",
+      "processing",
+      "completed",
+      "failed",
+    ];
+    const status: Status = allowed.includes(job.status as Status)
+      ? (job.status as Status)
+      : "pending";
     processingStatus = {
       lastRun: job.started_at,
-      status: job.status,
-      videosProcessed: (job.metadata as any)?.videosProcessed || 0,
-      commentsHarvested: (job.metadata as any)?.commentsHarvested || 0,
-      domainsExtracted: (job.metadata as any)?.domainsExtracted || 0,
+      status,
+      videosProcessed: job.metadata?.videosProcessed || 0,
+      commentsHarvested: job.metadata?.commentsHarvested || 0,
+      domainsExtracted: job.metadata?.domainsExtracted || 0,
     };
   }
 
