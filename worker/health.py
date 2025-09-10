@@ -33,6 +33,9 @@ class HealthCheckServer:
         self.app.router.add_get("/ready", self.readiness_check)
         self.app.router.add_get("/live", self.liveness_check)
         self.app.router.add_get("/metrics", self.metrics)
+        # Scraping endpoints for testing
+        self.app.router.add_post("/discover", self.discover_videos)
+        self.app.router.add_post("/harvest", self.harvest_comments)
     
     async def health_check(self, request: web.Request) -> web.Response:
         """
@@ -177,6 +180,114 @@ class HealthCheckServer:
         logger.debug("metrics_requested", metrics=metrics_data)
         
         return web.json_response(metrics_data, status=200)
+    
+    async def discover_videos(self, request: web.Request) -> web.Response:
+        """
+        Test endpoint for video discovery functionality
+        """
+        try:
+            # Check if rate limit allows this operation
+            if not await rate_limiter.acquire_token():
+                return web.json_response({
+                    "error": "Rate limit exceeded",
+                    "retry_after": 60
+                }, status=429)
+            
+            # For now, return a mock response since actual discovery logic
+            # would need to be implemented in a separate module
+            response_data = {
+                "status": "success",
+                "message": "Video discovery test endpoint",
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "worker_id": config.worker_id,
+                "discovered_videos": [
+                    {
+                        "video_id": "test_video_123",
+                        "url": "https://www.tiktok.com/@user/video/test_video_123",
+                        "description": "Mock TikTok video for testing",
+                        "is_promoted": True
+                    }
+                ]
+            }
+            
+            logger.info("discovery_endpoint_called", worker_id=config.worker_id)
+            return web.json_response(response_data, status=200)
+            
+        except Exception as e:
+            logger.error("discovery_endpoint_error", error=str(e))
+            return web.json_response({
+                "error": "Discovery failed",
+                "message": str(e)
+            }, status=500)
+    
+    async def harvest_comments(self, request: web.Request) -> web.Response:
+        """
+        Test endpoint for comment harvesting functionality
+        """
+        try:
+            # Check if rate limit allows this operation
+            if not await rate_limiter.acquire_token():
+                return web.json_response({
+                    "error": "Rate limit exceeded",
+                    "retry_after": 60
+                }, status=429)
+            
+            # Parse request body
+            try:
+                data = await request.json()
+                video_id = data.get("video_id", "test_video_123")
+            except:
+                video_id = "test_video_123"
+            
+            # Import domain extractor for testing
+            from domain_extractor import DomainExtractor
+            
+            # Mock comment data for testing domain extraction
+            mock_comments = [
+                "Check out this amazing deal at example.com!",
+                "Visit my website at mydomain.net for more info",
+                "Get 50% off at sale.shop.co",
+                "https://www.promotions.org has the best deals",
+                "Click here: bit.ly/test123",
+                "Regular comment without any domains"
+            ]
+            
+            # Extract domains from mock comments
+            extracted_domains = []
+            for comment_text in mock_comments:
+                domains = DomainExtractor.extract_domains(comment_text)
+                for domain in domains:
+                    extracted_domains.append({
+                        "domain": domain,
+                        "category": DomainExtractor.categorize_domain(domain),
+                        "is_shortener": DomainExtractor.is_url_shortener(domain),
+                        "source_comment": comment_text
+                    })
+            
+            response_data = {
+                "status": "success",
+                "message": "Comment harvesting test endpoint",
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "worker_id": config.worker_id,
+                "video_id": video_id,
+                "total_comments": len(mock_comments),
+                "domains_found": len(extracted_domains),
+                "extracted_domains": extracted_domains
+            }
+            
+            logger.info("harvest_endpoint_called", 
+                       worker_id=config.worker_id,
+                       video_id=video_id,
+                       domains_found=len(extracted_domains))
+            
+            return web.json_response(response_data, status=200)
+            
+        except Exception as e:
+            logger.error("harvest_endpoint_error", error=str(e))
+            return web.json_response({
+                "error": "Harvesting failed",
+                "message": str(e)
+            }, status=500)
     
     async def start(self):
         """Start the health check server"""
