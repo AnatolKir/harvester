@@ -11,10 +11,14 @@ import {
   triggerDiscoveryBackfill,
 } from "../../inngest";
 
-const supabase = createClient<Database>(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+function getAdminSupabase() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) {
+    throw new Error("Supabase admin credentials are not configured");
+  }
+  return createClient<Database>(url, key);
+}
 
 // Admin functions for Inngest job management
 export class InngestAdmin {
@@ -23,6 +27,7 @@ export class InngestAdmin {
    */
   static async getSystemHealth() {
     try {
+      const supabase = getAdminSupabase();
       const { data, error } = await supabase
         .rpc("get_system_health")
         .returns<unknown[]>();
@@ -41,6 +46,7 @@ export class InngestAdmin {
    */
   static async getJobMetrics(jobType?: string, hoursBack: number = 24) {
     try {
+      const supabase = getAdminSupabase();
       const { data, error } = await supabase
         .rpc("get_job_metrics", {
           job_type_filter: jobType || null,
@@ -62,6 +68,7 @@ export class InngestAdmin {
    */
   static async getRecentLogs(limit: number = 50) {
     try {
+      const supabase = getAdminSupabase();
       const { data, error } = await supabase
         .from("system_logs")
         .select("*")
@@ -82,6 +89,7 @@ export class InngestAdmin {
    */
   static async getActiveJobs() {
     try {
+      const supabase = getAdminSupabase();
       const { data, error } = await supabase.from("v_active_jobs").select("*");
 
       if (error) throw error;
@@ -98,6 +106,7 @@ export class InngestAdmin {
    */
   static async getDeadLetterQueue(status?: string) {
     try {
+      const supabase = getAdminSupabase();
       let query = supabase
         .from("dead_letter_queue")
         .select("*")
@@ -123,6 +132,7 @@ export class InngestAdmin {
    */
   static async isKillSwitchActive(): Promise<boolean> {
     try {
+      const supabase = getAdminSupabase();
       const { data, error } = await supabase
         .from("system_config")
         .select("value")
@@ -263,6 +273,7 @@ export class InngestAdmin {
    */
   static async updateConfig(key: string, value: unknown, description?: string) {
     try {
+      const supabase = getAdminSupabase();
       const { error } = await supabase.from("system_config").upsert(
         {
           key,
@@ -289,6 +300,7 @@ export class InngestAdmin {
    */
   static async getSystemConfig() {
     try {
+      const supabase = getAdminSupabase();
       const { data, error } = await supabase
         .from("system_config")
         .select("*")
@@ -309,6 +321,7 @@ export class InngestAdmin {
   static async retryDeadLetterJob(dlqId: string) {
     try {
       // Get the DLQ item
+      const supabase = getAdminSupabase();
       const { error: fetchError } = await supabase
         .from("dead_letter_queue")
         .select("id")
@@ -344,6 +357,7 @@ export class InngestAdmin {
    */
   static async deleteDeadLetterItem(dlqId: string) {
     try {
+      const supabase = getAdminSupabase();
       const { error } = await supabase
         .from("dead_letter_queue")
         .delete()
