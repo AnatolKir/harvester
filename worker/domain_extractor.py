@@ -6,9 +6,9 @@ from urllib.parse import urlparse
 class DomainExtractor:
     """Extract and normalize domains from text content."""
     
-    # URL pattern to match domains
+    # URL pattern to match domains (negative lookbehind to exclude emails)
     DOMAIN_PATTERN = re.compile(
-        r'(?:https?://)?(?:www\.)?([a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*\.[a-zA-Z]{2,})',
+        r'(?<![@])(?:https?://)?(?:www\.)?([a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*\.[a-zA-Z]{2,})',
         re.IGNORECASE
     )
     
@@ -63,6 +63,10 @@ class DomainExtractor:
     def is_valid_domain(cls, domain: str) -> bool:
         """Check if a domain is valid and not blacklisted."""
         if not domain or len(domain) < 4:
+            return False
+        
+        # Check if domain starts or ends with a dot
+        if domain.startswith('.') or domain.endswith('.'):
             return False
         
         # Check if blacklisted
