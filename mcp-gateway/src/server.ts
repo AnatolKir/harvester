@@ -6,6 +6,7 @@ import { logger } from './utils/logger';
 import { requestLogger } from './middleware/requestLogger';
 import { errorHandler } from './middleware/errorHandler';
 import { healthRouter } from './routes/health';
+import toolRegistry from './tools/registry';
 
 export class Server {
   private app: Application;
@@ -72,24 +73,42 @@ export class Server {
           return;
         }
 
-        // TODO: Implement MCP tool execution logic here
-        // This will be implemented in the next prompts
-        logger.info({
-          message: 'MCP tool request received',
-          tool,
-          params,
-        });
+        // Check if tool exists
+        if (!toolRegistry.has(tool)) {
+          res.status(404).json({
+            error: {
+              message: `Tool not found: ${tool}`,
+              statusCode: 404,
+              availableTools: toolRegistry.getToolNames(),
+            },
+          });
+          return;
+        }
+
+        // Execute the tool
+        const startTime = Date.now();
+        const result = await toolRegistry.execute(tool, params || {});
+        const executionTime = Date.now() - startTime;
 
         res.status(200).json({
           success: true,
           tool,
-          result: {
-            message: 'MCP endpoint placeholder - tool execution not yet implemented',
-          },
+          result,
+          executionTime,
+          timestamp: Date.now(),
         });
       } catch (error) {
         next(error);
       }
+    });
+    
+    // Tool discovery endpoint
+    this.app.get('/mcp/tools', (_req: Request, res: Response) => {
+      const tools = toolRegistry.getToolMetadata();
+      res.json({
+        tools,
+        count: tools.length,
+      });
     });
 
     // Metrics endpoint (placeholder)
