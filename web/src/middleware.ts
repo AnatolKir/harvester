@@ -48,6 +48,13 @@ export async function middleware(request: NextRequest) {
   const withHeaders = (res: NextResponse) =>
     applySecurityHeaders(res, securityHeaders);
 
+  // Redirect magic-link page to login (since login now uses magic link)
+  if (pathname === "/auth/magic-link") {
+    return withHeaders(
+      NextResponse.redirect(new URL("/auth/login", request.url))
+    );
+  }
+
   // Define route patterns
   const isAuthPage = pathname.startsWith("/auth");
   const isPublicPage = pathname.startsWith("/public");
