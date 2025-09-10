@@ -134,7 +134,7 @@ export class Server {
     this.app.get('/', (_req: Request, res: Response) => {
       res.json({
         service: 'MCP Gateway',
-        version: '1.0.0',
+        version: '1.0.1',
         status: 'running',
         endpoints: {
           health: '/health',
