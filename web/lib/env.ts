@@ -32,6 +32,7 @@ const envSchema = z.object({
   MCP_STICKY_SESSION_MINUTES: z.coerce.number().int().default(10),
   DISCOVERY_RPM: z.coerce.number().int().default(30),
   COMMENTS_RPM: z.coerce.number().int().default(60),
+  HTTP_ENRICH_RPM: z.coerce.number().int().default(30),
   // Optional WHOIS API for enrichment
   WHOIS_API_URL: z.string().url().optional(),
   WHOIS_API_KEY: z.string().optional(),
@@ -79,6 +80,7 @@ function validateEnv(): Env {
     MCP_STICKY_SESSION_MINUTES: process.env.MCP_STICKY_SESSION_MINUTES,
     DISCOVERY_RPM: process.env.DISCOVERY_RPM,
     COMMENTS_RPM: process.env.COMMENTS_RPM,
+    HTTP_ENRICH_RPM: process.env.HTTP_ENRICH_RPM,
     WHOIS_API_URL: process.env.WHOIS_API_URL,
     WHOIS_API_KEY: process.env.WHOIS_API_KEY,
     MATVIEWS_ENABLED: process.env.MATVIEWS_ENABLED,
@@ -130,6 +132,7 @@ export function getServerEnv() {
     MCP_STICKY_SESSION_MINUTES: env.MCP_STICKY_SESSION_MINUTES,
     DISCOVERY_RPM: env.DISCOVERY_RPM,
     COMMENTS_RPM: env.COMMENTS_RPM,
+    HTTP_ENRICH_RPM: env.HTTP_ENRICH_RPM,
     WHOIS_API_URL: env.WHOIS_API_URL,
     WHOIS_API_KEY: env.WHOIS_API_KEY,
     MATVIEWS_ENABLED: env.MATVIEWS_ENABLED,
