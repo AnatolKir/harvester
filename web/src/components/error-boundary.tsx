@@ -47,13 +47,13 @@ export class ErrorBoundary extends Component<Props, State> {
 
     // Log error to centralized logging system
     logger.logError(error, {
-      component: "react-error-boundary",
+      component: "web",
       severity: "high",
       endpoint: window.location.pathname,
       userAgent: navigator.userAgent,
       tags: {
         ...context,
-        componentStack: errorInfo.componentStack,
+        componentStack: errorInfo.componentStack || "",
         errorBoundary: "true",
         retryCount: this.state.retryCount.toString(),
       },

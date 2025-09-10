@@ -110,13 +110,14 @@ export interface Database {
         Row: {
           id: string;
           domain: string;
-          first_seen: string;
-          last_seen: string;
-          total_mentions: number;
-          unique_videos: number;
-          unique_author_count: number;
+          tld: string;
+          subdomain: string | null;
           is_suspicious: boolean;
-          is_active: boolean;
+          is_verified: boolean;
+          mention_count: number;
+          first_seen_at: string;
+          last_seen_at: string;
+          notes: string | null;
           metadata: Json | null;
           created_at: string;
           updated_at: string;
@@ -124,13 +125,14 @@ export interface Database {
         Insert: {
           id?: string;
           domain: string;
-          first_seen?: string;
-          last_seen?: string;
-          total_mentions?: number;
-          unique_videos?: number;
-          unique_author_count?: number;
+          tld: string;
+          subdomain?: string | null;
           is_suspicious?: boolean;
-          is_active?: boolean;
+          is_verified?: boolean;
+          mention_count?: number;
+          first_seen_at?: string;
+          last_seen_at?: string;
+          notes?: string | null;
           metadata?: Json | null;
           created_at?: string;
           updated_at?: string;
@@ -138,13 +140,14 @@ export interface Database {
         Update: {
           id?: string;
           domain?: string;
-          first_seen?: string;
-          last_seen?: string;
-          total_mentions?: number;
-          unique_videos?: number;
-          unique_author_count?: number;
+          tld?: string;
+          subdomain?: string | null;
           is_suspicious?: boolean;
-          is_active?: boolean;
+          is_verified?: boolean;
+          mention_count?: number;
+          first_seen_at?: string;
+          last_seen_at?: string;
+          notes?: string | null;
           metadata?: Json | null;
           created_at?: string;
           updated_at?: string;
@@ -153,24 +156,51 @@ export interface Database {
       domain_mention: {
         Row: {
           id: string;
+          domain_id: string;
           domain: string | null;
-          video_id: string | null;
-          comment_id: string | null;
+          comment_id: string;
+          video_id: string;
+          mention_text: string;
+          position_start: number | null;
+          position_end: number | null;
+          context: string | null;
+          confidence_score: number;
+          extraction_method: string;
+          discovered_at: string;
           created_at: string;
+          updated_at: string;
         };
         Insert: {
           id?: string;
-          domain: string;
-          video_id: string;
+          domain_id: string;
+          domain?: string | null;
           comment_id: string;
+          video_id: string;
+          mention_text: string;
+          position_start?: number | null;
+          position_end?: number | null;
+          context?: string | null;
+          confidence_score?: number;
+          extraction_method?: string;
+          discovered_at?: string;
           created_at?: string;
+          updated_at?: string;
         };
         Update: {
           id?: string;
+          domain_id?: string;
           domain?: string | null;
-          video_id?: string | null;
-          comment_id?: string | null;
+          comment_id?: string;
+          video_id?: string;
+          mention_text?: string;
+          position_start?: number | null;
+          position_end?: number | null;
+          context?: string | null;
+          confidence_score?: number;
+          extraction_method?: string;
+          discovered_at?: string;
           created_at?: string;
+          updated_at?: string;
         };
       };
       job_log: {
@@ -248,43 +278,44 @@ export interface Database {
       };
     };
     Views: {
+      v_domains_overview: {
+        Row: {
+          id: string;
+          domain: string;
+          total_mentions: number;
+          first_seen: string;
+          last_seen: string;
+          is_suspicious: boolean;
+          is_verified: boolean;
+          metadata: Json | null;
+        };
+      };
       v_domains_new_today: {
         Row: {
-          domain: string | null;
-          first_seen: string | null;
-          last_seen: string | null;
-          unique_videos: number | null;
-          total_mentions: number | null;
+          id: string;
+          domain: string;
+          mentions_today: number;
+          first_seen: string;
         };
       };
-      v_domains_heating: {
+      v_domain_mentions_recent: {
         Row: {
-          domain: string | null;
-          last_seen: string | null;
-          total_mentions: number | null;
-          unique_videos: number | null;
+          id: string;
+          domain: string;
+          domain_id: string;
+          comment_id: string;
+          video_id: string;
+          created_at: string;
+          discovered_at: string;
+          mention_text: string;
+          context: string | null;
         };
       };
-      v_domains_trending: {
+      v_pipeline_stats: {
         Row: {
-          domain: string | null;
-          mentions_7d: number | null;
-          last_seen: string | null;
-          unique_videos: number | null;
-        };
-      };
-      v_domain_details: {
-        Row: {
-          domain_id: string | null;
-          domain: string | null;
-          first_seen: string | null;
-          last_seen: string | null;
-          total_mentions: number | null;
-          video_mentions: number | null;
-          comment_mentions: number | null;
-          unique_videos: number | null;
-          unique_authors: number | null;
-          is_suspicious: boolean | null;
+          domains_day: number;
+          comments_day: number;
+          errors_day: number;
         };
       };
       v_user_management: {
@@ -326,6 +357,17 @@ export interface Database {
       is_user_admin: {
         Args: {};
         Returns: boolean;
+      };
+      get_domain_time_series: {
+        Args: {
+          p_domain_id: string;
+          p_start_date: string;
+          p_end_date: string;
+        };
+        Returns: Array<{
+          date: string;
+          mention_count: number;
+        }>;
       };
     };
     Enums: {
