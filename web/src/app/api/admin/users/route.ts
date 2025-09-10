@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createServiceClient } from "@supabase/supabase-js";
+import { Resend } from "resend";
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const supabase = await createClient();
 
@@ -129,6 +130,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Get user email for notifications
+    const { data: targetUser } = await serviceClient
+      .from("user_profiles")
+      .select("email")
+      .eq("user_id", userId)
+      .single();
+
+    if (!targetUser?.email) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
     if (action === "approve") {
       // Call the approve_user function using service client
       const { error: approveError } = await serviceClient.rpc("approve_user", {
@@ -141,6 +153,20 @@ export async function POST(request: NextRequest) {
           { error: "Failed to approve user" },
           { status: 500 }
         );
+      }
+
+      // Send approval email
+      if (process.env.RESEND_API_KEY) {
+        const resend = new Resend(process.env.RESEND_API_KEY);
+        await resend.emails.send({
+          from: "Highly Educated <hello@data.highlyeducated.com>",
+          to: targetUser.email,
+          subject: "Your access has been approved",
+          html: `<h2>Welcome to Highly Educated!</h2>
+            <p>Your access request has been approved by an administrator.</p>
+            <p>You can now sign in using your magic link:</p>
+            <p><a href="https://data.highlyeducated.com/auth/login">Sign In</a></p>`,
+        });
       }
     } else if (action === "reject") {
       // Call the reject_user function using service client
@@ -155,6 +181,20 @@ export async function POST(request: NextRequest) {
           { error: "Failed to reject user" },
           { status: 500 }
         );
+      }
+
+      // Send rejection email
+      if (process.env.RESEND_API_KEY) {
+        const resend = new Resend(process.env.RESEND_API_KEY);
+        await resend.emails.send({
+          from: "Highly Educated <hello@data.highlyeducated.com>",
+          to: targetUser.email,
+          subject: "Access request denied",
+          html: `<h2>Access Request Denied</h2>
+            <p>Your access request to Highly Educated has been denied.</p>
+            ${reason ? `<p>Reason: ${reason}</p>` : ""}
+            <p>If you believe this was in error, please contact the administrator.</p>`,
+        });
       }
     } else {
       return NextResponse.json({ error: "Invalid action" }, { status: 400 });

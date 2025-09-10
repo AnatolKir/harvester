@@ -23,10 +23,12 @@ export default function RequestAccessPage() {
 
     try {
       // Sign up the user (they'll be created in pending status)
+      // emailRedirectTo set to empty string prevents confirmation email
       const { error: signUpError } = await supabase.auth.signUp({
         email,
         password: Math.random().toString(36).slice(-12), // Random password since we'll use magic links
         options: {
+          emailRedirectTo: "", // Prevent automatic confirmation email
           data: {
             full_name: fullName,
           },
@@ -70,10 +72,11 @@ export default function RequestAccessPage() {
             Your request has been submitted to the administrator.
           </p>
           <p className="text-muted-foreground mt-4 text-xs">
-            You&apos;ll receive an email at {email} once your access is approved.
+            You&apos;ll receive an email at {email} once your access is
+            approved.
           </p>
         </div>
-        <Link href="/auth/login" className="block mt-6">
+        <Link href="/auth/login" className="mt-6 block">
           <Button variant="outline" className="w-full">
             Back to sign in
           </Button>
@@ -92,7 +95,7 @@ export default function RequestAccessPage() {
           Submit your information for admin approval
         </p>
       </div>
-      <form onSubmit={handleRequestAccess} className="space-y-4 mt-6">
+      <form onSubmit={handleRequestAccess} className="mt-6 space-y-4">
         <div className="space-y-2">
           <Label htmlFor="fullName">Full Name</Label>
           <Input
@@ -122,7 +125,7 @@ export default function RequestAccessPage() {
           {loading ? "Submitting..." : "Request Access"}
         </Button>
       </form>
-      <p className="text-muted-foreground text-center text-sm mt-6">
+      <p className="text-muted-foreground mt-6 text-center text-sm">
         Already have access?{" "}
         <Link
           href="/auth/login"

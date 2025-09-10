@@ -21,7 +21,7 @@ export async function middleware(request: NextRequest) {
           return request.cookies.getAll();
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) =>
+          cookiesToSet.forEach(({ name, value }) =>
             request.cookies.set(name, value)
           );
           response = NextResponse.next({
@@ -43,6 +43,17 @@ export async function middleware(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
 
+  // Check user approval status if logged in
+  let userProfile = null;
+  if (user) {
+    const { data } = await supabase
+      .from("user_profiles")
+      .select("status, role")
+      .eq("user_id", user.id)
+      .single();
+    userProfile = data;
+  }
+
   // Prepare security headers helper
   const securityHeaders = buildSecurityHeaders(request);
   const withHeaders = (res: NextResponse) =>
@@ -59,6 +70,7 @@ export async function middleware(request: NextRequest) {
   const isAuthPage = pathname.startsWith("/auth");
   const isPublicPage = pathname.startsWith("/public");
   const isApiRoute = pathname.startsWith("/api");
+  const isPendingPage = pathname === "/auth/pending-approval";
   const isProtectedRoute = !isAuthPage && !isPublicPage && !isApiRoute;
 
   // Handle authentication logic
@@ -67,6 +79,22 @@ export async function middleware(request: NextRequest) {
     const redirectUrl = new URL("/auth/login", request.url);
     redirectUrl.searchParams.set("redirectTo", pathname);
     return withHeaders(NextResponse.redirect(redirectUrl));
+  }
+
+  // Check if user is pending or rejected
+  if (user && userProfile) {
+    if (userProfile.status === "pending" && !isPendingPage && !isAuthPage) {
+      // Redirect pending users to pending approval page
+      return withHeaders(
+        NextResponse.redirect(new URL("/auth/pending-approval", request.url))
+      );
+    }
+    if (userProfile.status === "rejected" && pathname !== "/auth/rejected") {
+      // Redirect rejected users to rejection page
+      return withHeaders(
+        NextResponse.redirect(new URL("/auth/rejected", request.url))
+      );
+    }
   }
 
   if (user && isAuthPage) {
