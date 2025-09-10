@@ -1,3 +1,4 @@
+import "server-only";
 type SlackBlock = { type: string; [key: string]: unknown };
 
 export type SlackAlertType =
@@ -74,7 +75,7 @@ async function getAlertsEnabled(): Promise<boolean> {
       .from("system_config")
       .select("value")
       .eq("key", "alerts_enabled")
-      .maybeSingle();
+      .maybeSingle<{ value: boolean }>();
     const enabled = (data?.value as boolean | undefined) ?? envFallback;
     alertsEnabledCache = { value: enabled, fetchedAt: now };
     return enabled;

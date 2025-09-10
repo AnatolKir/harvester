@@ -1,3 +1,4 @@
+import "server-only";
 import { createClient } from "@supabase/supabase-js";
 import {
   triggerVideoDiscovery,
@@ -21,11 +22,12 @@ export class InngestAdmin {
    */
   static async getSystemHealth() {
     try {
-      const { data, error } = await supabase.rpc("get_system_health");
+      const { data, error } =
+        await supabase.rpc<unknown[]>("get_system_health");
 
       if (error) throw error;
 
-      return data[0];
+      return (data as unknown[])[0];
     } catch (error) {
       console.error("Failed to get system health:", error);
       throw error;
@@ -37,7 +39,7 @@ export class InngestAdmin {
    */
   static async getJobMetrics(jobType?: string, hoursBack: number = 24) {
     try {
-      const { data, error } = await supabase.rpc("get_job_metrics", {
+      const { data, error } = await supabase.rpc<unknown[]>("get_job_metrics", {
         job_type_filter: jobType || null,
         hours_back: hoursBack,
       } as unknown as never);
@@ -121,11 +123,12 @@ export class InngestAdmin {
         .from("system_config")
         .select("value")
         .eq("key", "kill_switch_active")
+        .returns<{ value: boolean }>()
         .single();
 
       if (error) throw error;
 
-      return data.value === true;
+      return Boolean(data?.value === true);
     } catch (error) {
       console.error("Failed to check kill switch status:", error);
       return false;
