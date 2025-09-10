@@ -1,12 +1,6 @@
 # TikTok Domain Harvester Worker Docker Image
-FROM python:3.11-slim
-
-# Minimal system dependencies (Playwright will install its own runtime deps)
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
-       ca-certificates \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+# Use official Playwright image with browsers and deps preinstalled
+FROM mcr.microsoft.com/playwright/python:v1.48.0-jammy
 
 # Set working directory
 WORKDIR /app
@@ -14,12 +8,8 @@ WORKDIR /app
 # Copy requirements first for better caching
 COPY requirements.txt .
 
-# Install Python dependencies
+# Install Python dependencies (Playwright already present in base image)
 RUN pip install --no-cache-dir -r requirements.txt
-
-# Install Playwright browsers
-RUN playwright install chromium
-RUN playwright install-deps chromium
 
 # Copy application code
 COPY . .
