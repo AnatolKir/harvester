@@ -1,0 +1,37 @@
+{
+  "name": "tiktok-domain-harvester",
+  "version": "1.0.0",
+  "private": true,
+  "description": "TikTok Domain Harvester - Monorepo",
+  "workspaces": [
+    "web",
+    "inngest"
+  ],
+  "scripts": {
+    "dev": "cd web && npm run dev",
+    "build": "cd web && npm run build",
+    "start": "cd web && npm start",
+    "lint": "cd web && npm run lint",
+    "test": "cd web && npm test",
+    "worker": "cd worker && python main.py",
+    "deploy-web": "cd web && vercel --prod",
+    "deploy-worker": "railway up"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-repo/tiktok-domain-harvester.git"
+  },
+  "keywords": [
+    "tiktok",
+    "domain",
+    "harvester",
+    "web-scraping",
+    "next.js",
+    "python",
+    "supabase"
+  ],
+  "license": "MIT"
+}
