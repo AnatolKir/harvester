@@ -144,7 +144,7 @@ async function handleVideosGet(request: NextRequest) {
   }
 
   const response = createCursorPaginatedResponse(videosWithDomains, {
-    cursor,
+    cursor: cursor ?? null,
     nextCursor,
     hasMore,
     limit,
