@@ -1,6 +1,7 @@
 import { Tool } from '../types';
 import { logger } from '../utils/logger';
 import tiktokSearchTool from './tiktok-search';
+import tiktokCommentsPageTool from './comments-page';
 
 /**
  * Tool Registry - Manages all custom tools available in the MCP gateway
@@ -19,8 +20,10 @@ class ToolRegistry {
     // Register TikTok search tool
     this.register(tiktokSearchTool);
     
+    // Register TikTok comments page tool
+    this.register(tiktokCommentsPageTool);
+    
     // Future tools will be registered here
-    // this.register(tiktokCommentsTool);
     // this.register(tiktokVideoDetailsTool);
     
     logger.info({
