@@ -1,13 +1,14 @@
 import { NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import type { Database } from "@/types/database";
 import { WorkerWebhookSchema } from "@/lib/validations";
 import {
   createSuccessResponse,
-  createErrorResponse,
   withErrorHandling,
   addCorsHeaders,
   addRateLimitHeaders,
 } from "@/lib/api";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { headers } from "next/headers";
 
 async function handleWorkerWebhook(request: NextRequest) {
@@ -29,10 +30,12 @@ async function handleWorkerWebhook(request: NextRequest) {
   const supabase = await createClient();
 
   // Create or update job log entry
-  const jobLogData = {
+  type JobLogInsert = Database["public"]["Tables"]["job_log"]["Insert"];
+
+  const jobLogData: JobLogInsert = {
     id: webhook.jobId,
     job_type: webhook.jobType,
-    status: webhook.status,
+    status: webhook.status as JobLogInsert["status"],
     started_at:
       webhook.status === "started" ? new Date().toISOString() : undefined,
     completed_at:
@@ -45,7 +48,7 @@ async function handleWorkerWebhook(request: NextRequest) {
       ...webhook.results,
       userAgent,
       timestamp: new Date().toISOString(),
-    },
+    } as unknown as JobLogInsert["metadata"],
   };
 
   // Use upsert to handle both create and update scenarios
@@ -95,7 +98,19 @@ async function handleWorkerWebhook(request: NextRequest) {
   return corsResponse;
 }
 
-async function handleJobCompletionActions(supabase: any, webhook: any) {
+async function handleJobCompletionActions(
+  supabase: SupabaseClient<Database>,
+  webhook: {
+    jobType: "discovery" | "comment_harvesting" | "domain_extraction" | string;
+    results?: {
+      videosProcessed?: number;
+      commentsHarvested?: number;
+      domainsExtracted?: number;
+      [key: string]: unknown;
+    } | null;
+    jobId: string;
+  }
+) {
   const { jobType, results, jobId } = webhook;
 
   switch (jobType) {
@@ -144,7 +159,7 @@ async function handleJobCompletionActions(supabase: any, webhook: any) {
 }
 
 // Handle OPTIONS requests for CORS
-export async function OPTIONS(request: NextRequest) {
+export async function OPTIONS(_request: NextRequest) {
   const response = new Response(null, { status: 200 });
   return addCorsHeaders(response);
 }
