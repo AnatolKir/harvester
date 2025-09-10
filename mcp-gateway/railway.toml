@@ -1,0 +1,144 @@
+# Railway deployment configuration for MCP Gateway
+# See: https://docs.railway.app/reference/config
+
+[build]
+# Use Docker for building the application
+builder = "dockerfile"
+dockerfile = "Dockerfile"
+
+# Build configuration
+watchPatterns = ["src/**", "package*.json", "tsconfig.json"]
+
+# Build arguments (passed to Docker)
+[build.args]
+NODE_VERSION = "18.20.5"
+ALPINE_VERSION = "3.20"
+
+[deploy]
+# Health check configuration
+healthcheckPath = "/health"
+healthcheckTimeout = 10
+healthcheckInterval = 30
+startupProbe = "/health"
+numReplicas = 1
+
+# Restart policy
+restartPolicyType = "always"
+restartPolicyMaxRetries = 10
+
+# Deployment timeout (in seconds)
+deploymentTimeout = 300
+
+# Resource configuration
+[deploy.resources]
+# Memory limits
+memoryMin = "256Mi"
+memoryMax = "512Mi"
+
+# CPU limits (in millicores)
+cpuMin = "100m"
+cpuMax = "500m"
+
+[env]
+# Core configuration
+PORT = "3333"
+NODE_ENV = "production"
+
+# Node.js configuration
+NODE_OPTIONS = "--max-old-space-size=512"
+NODE_NO_WARNINGS = "1"
+
+# Logging configuration
+LOG_LEVEL = "info"
+LOG_FORMAT = "json"
+
+# Security headers
+HELMET_ENABLED = "true"
+CORS_ENABLED = "true"
+
+# Rate limiting
+RATE_LIMIT_WINDOW = "60000"
+RATE_LIMIT_MAX_REQUESTS = "100"
+
+# Service metadata
+SERVICE_NAME = "mcp-gateway"
+SERVICE_VERSION = "1.0.0"
+
+[experimental]
+# Enable private networking
+privateNetworking = true
+
+# Enable runtime logs
+runtimeLogs = true
+
+# Deployment strategy
+[deploy.strategy]
+type = "RollingUpdate"
+maxSurge = 1
+maxUnavailable = 0
+
+# Networking configuration
+[network]
+# Public domain configuration (Railway will auto-generate if not specified)
+# domains = ["mcp-gateway.up.railway.app"]
+
+# Internal service discovery
+internalPort = 3333
+protocol = "http"
+
+# Enable WebSocket support if needed
+websocket = false
+
+# Cron jobs (if needed)
+# [cron]
+# - Not needed for this service as it's a stateless API gateway
+
+# Volumes (if persistent storage is needed)
+# [volumes]
+# - Not needed for this stateless service
+
+# Secrets configuration
+# Note: Sensitive environment variables should be configured through Railway UI
+# Do not commit secrets to this file
+[secrets]
+# List of required secrets (configured via Railway dashboard)
+required = [
+  "BRIGHTDATA_API_KEY"
+]
+
+# GitHub integration
+[github]
+# Auto-deploy on push to main branch
+enabled = true
+branch = "main"
+autoDeploy = true
+
+# PR environments
+prDeploy = true
+prDeployCommand = "npm run build && npm run test"
+
+# Build cache configuration
+[cache]
+# Cache node_modules between builds
+paths = ["node_modules", ".npm"]
+key = "node-deps-v1-{{ checksum \"package-lock.json\" }}"
+
+# Monitoring and observability
+[observability]
+# Enable structured logging
+structuredLogs = true
+
+# Log level
+logLevel = "info"
+
+# Enable metrics collection
+metrics = true
+
+# Enable tracing (if APM is configured)
+tracing = false
+
+# Alerts configuration (requires Railway Teams plan)
+# [alerts]
+# healthcheck = true
+# errorRate = 0.01
+# responseTime = 1000

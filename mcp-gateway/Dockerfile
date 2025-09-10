@@ -86,8 +86,10 @@ RUN mkdir -p /app/logs && \
     chown -R mcpgateway:nodejs /app/logs
 
 # Security: Set proper file permissions
-RUN chmod -R 550 /app && \
-    chmod -R 770 /app/logs
+RUN chmod -R 755 /app && \
+    chmod -R 770 /app/logs && \
+    chmod -R 755 /app/dist && \
+    chmod -R 755 /app/node_modules
 
 # Switch to non-root user
 USER mcpgateway
