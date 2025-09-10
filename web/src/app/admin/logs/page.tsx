@@ -154,7 +154,8 @@ export default async function AdminLogsPage({
   let query = supabase
     .from("system_logs")
     .select("id,event_type,level,message,job_id,metadata,created_at")
-    .gte("created_at", sinceIso);
+    .gte("created_at", sinceIso)
+    .returns<SystemLogRow[]>();
 
   if (levelParam && levelParam !== "all") {
     query = query.eq("level", levelParam);

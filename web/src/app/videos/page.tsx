@@ -66,7 +66,18 @@ export default async function VideosPage({
   // Build base query against video table for filtering, sorting, cursoring
   let query = supabase
     .from("video")
-    .select("id, video_id, url, created_at, last_scraped_at, scrape_status");
+    .select("id, video_id, url, created_at, last_scraped_at, scrape_status")
+    .returns<
+      Pick<
+        VideoRow,
+        | "id"
+        | "video_id"
+        | "url"
+        | "created_at"
+        | "last_scraped_at"
+        | "scrape_status"
+      >[]
+    >();
 
   if (search) {
     // Search across common fields
