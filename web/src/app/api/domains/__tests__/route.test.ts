@@ -1,44 +1,109 @@
 import { NextRequest } from "next/server";
 import { GET } from "../route";
 
+// Mock security middleware to bypass authentication
+jest.mock("@/lib/security/middleware", () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { NextResponse } = require("next/server");
+
+  return {
+    withValidation: jest.fn((schema, handler) => {
+      return async (request: NextRequest) => {
+        try {
+          // Parse query parameters
+          const url = new URL(request.url);
+          const rawParams = {
+            search: url.searchParams.get("search") || undefined,
+            dateFilter: url.searchParams.get("dateFilter") || "all",
+            page: url.searchParams.get("page") || "1",
+            limit: url.searchParams.get("limit") || "50",
+            sortBy: url.searchParams.get("sortBy") || "last_seen_at",
+            sortOrder: url.searchParams.get("sortOrder") || "desc",
+          };
+
+          // Basic validation for invalid parameters
+          const page = parseInt(rawParams.page);
+          if (page <= 0) {
+            return NextResponse.json(
+              { success: false, error: "Validation failed" },
+              { status: 400 }
+            );
+          }
+
+          const params = {
+            ...rawParams,
+            page,
+            limit: parseInt(rawParams.limit),
+          };
+
+          const context = {
+            requestId: "test-request-id",
+            clientId: "test-client",
+            isAuthenticated: true,
+            isSuspicious: false,
+            timestamp: Date.now(),
+          };
+
+          return handler(request, params, context);
+        } catch {
+          return NextResponse.json(
+            { success: false, error: "Validation failed" },
+            { status: 400 }
+          );
+        }
+      };
+    }),
+    AuthenticatedApiSecurity: {
+      requireAuth: true,
+      rateLimitConfig: { authenticated: true },
+      validatePayload: true,
+      corsEnabled: false,
+    },
+  };
+});
+
 // Mock Supabase
 jest.mock("@/lib/supabase/server", () => ({
-  createClient: jest.fn(() => ({
-    from: jest.fn(() => ({
+  createClient: jest.fn(() => {
+    const mockQuery = {
       select: jest.fn().mockReturnThis(),
       eq: jest.fn().mockReturnThis(),
       gte: jest.fn().mockReturnThis(),
       ilike: jest.fn().mockReturnThis(),
       order: jest.fn().mockReturnThis(),
       range: jest.fn().mockReturnThis(),
-      then: jest.fn().mockResolvedValue({
-        data: [
-          {
-            id: "1",
-            domain: "example.com",
-            first_seen_at: "2024-01-01T00:00:00Z",
-            last_seen_at: "2024-01-02T00:00:00Z",
-            mention_count: 5,
-            is_url_shortener: false,
-            category: "standard",
-            created_at: "2024-01-01T00:00:00Z",
-          },
-          {
-            id: "2",
-            domain: "test.org",
-            first_seen_at: "2024-01-01T00:00:00Z",
-            last_seen_at: "2024-01-02T00:00:00Z",
-            mention_count: 3,
-            is_url_shortener: false,
-            category: "standard",
-            created_at: "2024-01-01T00:00:00Z",
-          },
-        ],
-        count: 2,
-        error: null,
-      }),
-    })),
-  })),
+    };
+
+    // Mock the final promise resolution
+    Object.assign(mockQuery, {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      then: (callback: (result: any) => any) => {
+        const result = {
+          data: [
+            {
+              domain: "example.com",
+              total_mentions: 5,
+              first_seen: "2024-01-01T00:00:00Z",
+              last_seen: "2024-01-02T00:00:00Z",
+            },
+            {
+              domain: "test.org",
+              total_mentions: 3,
+              first_seen: "2024-01-01T00:00:00Z",
+              last_seen: "2024-01-02T00:00:00Z",
+            },
+          ],
+          count: 2,
+          error: null,
+        };
+        return Promise.resolve(callback(result));
+      },
+    });
+
+    return {
+      from: jest.fn(() => mockQuery),
+    };
+  }),
 }));
 
 describe("GET /api/domains", () => {

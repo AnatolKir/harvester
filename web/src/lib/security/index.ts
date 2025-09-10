@@ -40,8 +40,8 @@ export class SQLSecurityUtils {
       sanitized = sanitized.replace(pattern, "");
     });
 
-    // Remove or escape quotes
-    sanitized = sanitized.replace(/['"]/g, "");
+    // Remove or escape quotes and semicolons
+    sanitized = sanitized.replace(/['"`;]/g, "");
 
     // Remove SQL comments
     sanitized = sanitized.replace(/--.*$/gm, "");
@@ -109,12 +109,11 @@ export class InputValidator {
       SQLSecurityUtils.containsSQLInjection(query) ||
       XSSSecurityUtils.containsXSS(query)
     ) {
-      // Sanitize the input
-      query = SQLSecurityUtils.sanitizeSQLInput(query);
-      query = XSSSecurityUtils.sanitizeXSS(query);
+      // If it contains malicious patterns, reject completely
+      return null;
     }
 
-    // Additional sanitization
+    // Additional sanitization for safe inputs
     query = query
       .replace(/[<>'";&\\]/g, "") // Remove dangerous characters
       .trim();
@@ -127,7 +126,7 @@ export class InputValidator {
    */
   static isValidUUID(uuid: string): boolean {
     const uuidRegex =
-      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     return uuidRegex.test(uuid);
   }
 
@@ -196,7 +195,7 @@ export class AuthSecurityUtils {
   static extractBearerToken(authHeader: string | null): string | null {
     if (!authHeader) return null;
 
-    const match = authHeader.match(/^Bearer\s+(.+)$/);
+    const match = authHeader.match(/^Bearer\s*(.*)$/);
     return match ? match[1] : null;
   }
 
@@ -243,7 +242,7 @@ export class RateLimitSecurityUtils {
    */
   static isSuspiciousRequest(request: NextRequest): boolean {
     const userAgent = request.headers.get("user-agent") || "";
-    const referer = request.headers.get("referer") || "";
+    // const referer = request.headers.get("referer") || "";
 
     // Check for suspicious patterns
     const suspiciousPatterns = [
@@ -294,6 +293,7 @@ export class DataSecurityUtils {
     maxPastDate.setFullYear(now.getFullYear() - 2); // Max 2 years ago
 
     if (startDate && startDate < maxPastDate) return false;
+    if (startDate && startDate > now) return false; // No future start dates
     if (endDate && endDate > now) return false;
     if (startDate && endDate && startDate > endDate) return false;
 
@@ -303,6 +303,7 @@ export class DataSecurityUtils {
   /**
    * Validate JSON payload size and structure
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   static validateJsonPayload(payload: any): boolean {
     try {
       const jsonString = JSON.stringify(payload);
@@ -321,6 +322,7 @@ export class DataSecurityUtils {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private static getObjectDepth(obj: any, depth = 0): number {
     if (depth > 50) return depth; // Prevent stack overflow
     if (typeof obj !== "object" || obj === null) return depth;

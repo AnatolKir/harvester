@@ -7,7 +7,9 @@ export {
   scraperLimiter,
   workerLimiter,
   checkRateLimit,
+  checkRateLimitWithLimiter,
   type RateLimitResponse,
+  type RateLimitConfig,
 } from "./limiter";
 
 export {

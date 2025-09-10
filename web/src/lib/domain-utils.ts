@@ -61,12 +61,18 @@ export function normalizeDomain(domain: string): string {
 export function isValidDomain(domain: string): boolean {
   if (!domain || domain.length < 4) return false;
 
+  // Check if it starts or ends with a dot
+  if (domain.startsWith(".") || domain.endsWith(".")) return false;
+
   // Check if it's blacklisted
   if (BLACKLISTED_DOMAINS.has(domain)) return false;
 
   // Basic validation
   const parts = domain.split(".");
   if (parts.length < 2) return false;
+
+  // Check that no part is empty (double dots)
+  if (parts.some((part) => part.length === 0)) return false;
 
   // Check TLD is at least 2 chars
   const tld = parts[parts.length - 1];

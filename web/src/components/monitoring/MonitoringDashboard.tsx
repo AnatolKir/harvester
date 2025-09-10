@@ -282,12 +282,14 @@ export function MonitoringDashboard() {
                   <div className="text-muted-foreground space-y-1 text-xs">
                     {(health.components.jobs.details as any).recentJobCount && (
                       <p>
-                        Recent: {(health.components.jobs.details as any).recentJobCount}
+                        Recent:{" "}
+                        {(health.components.jobs.details as any).recentJobCount}
                       </p>
                     )}
                     {(health.components.jobs.details as any).failureRate && (
                       <p>
-                        Failure: {(health.components.jobs.details as any).failureRate}
+                        Failure:{" "}
+                        {(health.components.jobs.details as any).failureRate}
                       </p>
                     )}
                   </div>

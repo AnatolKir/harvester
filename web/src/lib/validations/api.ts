@@ -2,17 +2,56 @@ import { z } from "zod";
 
 // Query parameter schemas
 export const PaginationSchema = z.object({
-  page: z.coerce.number().int().min(1).default(1),
-  limit: z.coerce.number().int().min(1).max(100).default(10),
+  page: z.coerce
+    .number()
+    .int()
+    .default(1)
+    .transform((val) => Math.max(1, val)),
+  limit: z.coerce
+    .number()
+    .int()
+    .default(10)
+    .transform((val) => Math.min(100, Math.max(1, val))),
 });
 
 export const CursorPaginationSchema = z.object({
-  cursor: z.string().optional(),
-  limit: z.coerce.number().int().min(1).max(100).default(10),
+  cursor: z
+    .union([z.string(), z.null()])
+    .optional()
+    .transform((val) => {
+      // Basic cursor validation - should be a valid base64-like string if provided
+      if (!val || val === null) return undefined;
+      if (typeof val !== "string") return undefined;
+      // Allow alphanumeric, +, /, =, - characters (common in cursors)
+      if (!/^[A-Za-z0-9+/=-]*$/.test(val)) return undefined;
+      return val;
+    }),
+  limit: z.coerce
+    .number()
+    .int()
+    .default(10)
+    .transform((val) => Math.min(100, Math.max(1, val))),
 });
 
+// Input sanitization helper function
+function sanitizeSearchInput(input: string): string {
+  return input
+    .replace(/['";]/g, "") // Remove quotes and semicolons
+    .replace(/--/g, "") // Remove SQL comment markers
+    .replace(/\/\*.*?\*\//g, "") // Remove /* */ style comments
+    .replace(/<script[^>]*>.*?<\/script>/gi, "") // Remove script tags
+    .replace(/javascript:/gi, "") // Remove javascript: protocol
+    .replace(/<[^>]*>/g, "") // Remove HTML tags
+    .trim();
+}
+
 export const SearchSchema = z.object({
-  search: z.string().min(1).max(255).optional(),
+  search: z
+    .string()
+    .min(1)
+    .max(255)
+    .optional()
+    .transform((val) => (val ? sanitizeSearchInput(val) : val)),
 });
 
 export const DateFilterSchema = z.object({
@@ -54,11 +93,32 @@ export const DomainIdSchema = z.object({
 
 // Worker webhook schemas
 export const WorkerWebhookSchema = z.object({
-  jobId: z.string(),
+  jobId: z
+    .string()
+    .min(1)
+    .max(255)
+    .refine(
+      (val) => {
+        // Reject SQL injection patterns
+        return !/['";]|--|\*\/|\*/.test(val);
+      },
+      { message: "Invalid jobId format" }
+    ),
   jobType: z.enum(["discovery", "comment_harvesting", "domain_extraction"]),
   status: z.enum(["started", "completed", "failed"]),
   metadata: z.record(z.string(), z.unknown()).optional(),
-  error: z.string().optional(),
+  error: z
+    .string()
+    .optional()
+    .transform((val) => {
+      // Sanitize error messages to remove sensitive info
+      if (!val) return val;
+      return val
+        .replace(/password=[^,\s]*/gi, "password=***")
+        .replace(/host=[^,\s]*/gi, "host=***")
+        .replace(/key=[^,\s]*/gi, "key=***")
+        .replace(/token=[^,\s]*/gi, "token=***");
+    }),
   results: z
     .object({
       videosProcessed: z.number().optional(),

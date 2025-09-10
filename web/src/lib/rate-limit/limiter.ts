@@ -43,7 +43,12 @@ export interface RateLimitResponse {
   reset: number;
 }
 
-export async function checkRateLimit(
+export interface RateLimitConfig {
+  interval: string;
+  limit: number;
+}
+
+export async function checkRateLimitWithLimiter(
   limiter: Ratelimit,
   identifier: string
 ): Promise<RateLimitResponse> {
@@ -55,4 +60,29 @@ export async function checkRateLimit(
     remaining,
     reset,
   };
+}
+
+// Convenience function that uses globalLimiter by default
+export async function checkRateLimit(
+  identifier: string,
+  config?: RateLimitConfig
+): Promise<RateLimitResponse> {
+  // If custom config is provided, create a temporary limiter
+  if (config) {
+    const customLimiter = new Ratelimit({
+      redis,
+      limiter: Ratelimit.tokenBucket(
+        config.limit,
+        config.interval,
+        config.limit
+      ),
+      analytics: true,
+      prefix: `@upstash/ratelimit:custom:${identifier}`,
+    });
+
+    return checkRateLimitWithLimiter(customLimiter, identifier);
+  }
+
+  // Use global limiter by default
+  return checkRateLimitWithLimiter(globalLimiter, identifier);
 }
