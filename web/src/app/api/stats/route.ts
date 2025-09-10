@@ -31,6 +31,8 @@ interface DashboardStats {
   }>;
 }
 
+type Status = "pending" | "processing" | "completed" | "failed";
+
 async function handleStatsGet(_request: NextRequest) {
   const supabase = await createClient();
 
@@ -146,9 +148,15 @@ async function handleStatsGet(_request: NextRequest) {
   }
 
   // Handle processing status
-  let processingStatus = {
-    lastRun: null as string | null,
-    status: "pending" as const,
+  let processingStatus: {
+    lastRun: string | null;
+    status: Status;
+    videosProcessed: number;
+    commentsHarvested: number;
+    domainsExtracted: number;
+  } = {
+    lastRun: null,
+    status: "pending",
     videosProcessed: 0,
     commentsHarvested: 0,
     domainsExtracted: 0,
@@ -168,7 +176,6 @@ async function handleStatsGet(_request: NextRequest) {
       } | null;
     };
     const job = recentJobResult.value.data[0] as JobRow;
-    type Status = "pending" | "processing" | "completed" | "failed";
     const allowed: ReadonlyArray<Status> = [
       "pending",
       "processing",
