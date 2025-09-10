@@ -46,6 +46,23 @@
 
 ---
 
+## Cloud Runtime Topology
+
+- **Web (Vercel)**: Next.js app (`/web`), connects directly to Supabase. No direct dependency on the worker by default.
+- **Worker (Railway)**: Python + Playwright (`/worker`), writes to Supabase, exposes health on port 8080 (`/live`, `/ready`, `/health`).
+- **Jobs (Inngest)**: Cron/triggered jobs (`/inngest`) for discovery, enrichment, refresh.
+- **Database (Supabase)**: Single source of truth; UI reads via views, worker writes rows.
+- Optional: Front Railway with Cloudflare for custom domain + TLS + caching/DDOS.
+
+### Web ↔ Worker Integration
+
+- Default: decoupled via database; no synchronous calls required.
+- Optional UI → Worker: configure `WORKER_WEBHOOK_URL` (Vercel) to call a worker endpoint for manual triggers. Secure with bearer token.
+- Optional Worker → UI: emit POSTs to a web route (e.g., `/api/worker/webhook`) with `Authorization: Bearer <token>` for event notifications. (Add route when needed.)
+- Observability: Railway logs + health endpoints; Slack alerts (optional) from the web app.
+
+---
+
 ## Component Guidelines
 
 ### Database (Supabase / Postgres)

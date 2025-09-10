@@ -97,6 +97,22 @@ psql $SUPABASE_URL < supabase/schema.sql
 - **Worker**: deploy to Railway/Fly
 - **Inngest**: deploy jobs with `inngest dev` or GitHub Actions
 
+#### Worker (Railway)
+
+- **Service URL**: use your Railway service domain (or a custom CNAME like `worker.data.highlyeducated.com`).
+- **Health Endpoints** (port 8080):
+  - `/live` (liveness)
+  - `/ready` (readiness)
+  - `/health` (comprehensive)
+- **Redeploy**: Railway → your service → Deployments → Redeploy (or enable auto-deploy on pushes to `main`).
+- **Required env (Railway)**:
+  - `SUPABASE_URL` (usually same as `NEXT_PUBLIC_SUPABASE_URL`)
+  - `SUPABASE_SERVICE_KEY` (service role key)
+  - `WORKER_ENV=production`
+  - Optional: `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` for global rate limiting
+  - Optional: `LOG_LEVEL`, `MAX_CONCURRENT_BROWSERS`, `PROXY_*`
+- **Optional web → worker**: if the UI should trigger worker actions, set `WORKER_WEBHOOK_URL` in Vercel to your worker endpoint and secure it with a bearer token. (We can add this route when needed.)
+
 ---
 
 ## Usage
