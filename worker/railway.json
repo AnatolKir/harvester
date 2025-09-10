@@ -6,8 +6,8 @@
   },
   "deploy": {
     "startCommand": "python main.py",
-    "healthcheckPath": "/health",
-    "healthcheckTimeout": 10,
+    "healthcheckPath": "/live",
+    "healthcheckTimeout": 30,
     "restartPolicyType": "always"
   },
   "environments": {
