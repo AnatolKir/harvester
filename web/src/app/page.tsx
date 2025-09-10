@@ -4,15 +4,26 @@ import { createClient } from "@/lib/supabase/server";
 
 export default async function Home() {
   const supabase = await createClient();
-  const [{ count: totalDomains }, pipelineStats, recentDomains] = await Promise.all([
-    supabase.from("v_domains_overview").select("*", { count: "exact", head: true }),
-    supabase.from("v_pipeline_stats").select("domains_day, comments_day, errors_day").single(),
-    supabase
-      .from("v_domains_overview")
-      .select("domain, total_mentions, first_seen, last_seen")
-      .order("last_seen", { ascending: false })
-      .limit(5),
-  ]);
+  const [{ count: totalDomains }, pipelineStats, recentDomains] =
+    await Promise.all([
+      supabase
+        .from("v_domains_overview")
+        .select("*", { count: "exact", head: true }),
+      supabase
+        .from("v_pipeline_stats")
+        .select("domains_day, comments_day, errors_day")
+        .returns<{
+          domains_day: number;
+          comments_day: number;
+          errors_day: number;
+        }>()
+        .single(),
+      supabase
+        .from("v_domains_overview")
+        .select("domain, total_mentions, first_seen, last_seen")
+        .order("last_seen", { ascending: false })
+        .limit(5),
+    ]);
 
   const domainsToday = pipelineStats.data?.domains_day ?? 0;
   const commentsToday = pipelineStats.data?.comments_day ?? 0;
@@ -95,15 +106,21 @@ export default async function Home() {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <span>Domains Today</span>
-              <span className="text-muted-foreground text-sm">{domainsToday}</span>
+              <span className="text-muted-foreground text-sm">
+                {domainsToday}
+              </span>
             </div>
             <div className="flex items-center justify-between">
               <span>Comments Today</span>
-              <span className="text-muted-foreground text-sm">{commentsToday}</span>
+              <span className="text-muted-foreground text-sm">
+                {commentsToday}
+              </span>
             </div>
             <div className="flex items-center justify-between">
               <span>Errors Today</span>
-              <span className="text-muted-foreground text-sm">{errorsToday}</span>
+              <span className="text-muted-foreground text-sm">
+                {errorsToday}
+              </span>
             </div>
           </div>
         </div>
