@@ -57,7 +57,7 @@ export const WorkerWebhookSchema = z.object({
   jobId: z.string(),
   jobType: z.enum(["discovery", "comment_harvesting", "domain_extraction"]),
   status: z.enum(["started", "completed", "failed"]),
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
   error: z.string().optional(),
   results: z
     .object({
