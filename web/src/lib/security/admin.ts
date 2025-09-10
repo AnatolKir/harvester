@@ -31,19 +31,20 @@ export function withAdminGuard(handler: AdminGuardHandler) {
 async function getAuthenticatedUserEmail(
   request: NextRequest
 ): Promise<string | null> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!supabaseUrl || !supabaseAnonKey) {
+    return null;
+  }
   try {
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() {
-            return request.cookies.getAll();
-          },
-          setAll() {},
+    const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll();
         },
-      }
-    );
+        setAll() {},
+      },
+    });
     const { data } = await supabase.auth.getUser();
     return data.user?.email ?? null;
   } catch {
@@ -58,6 +59,13 @@ export async function auditAdminAction(params: {
   level?: "debug" | "info" | "warn" | "error";
   metadata?: Record<string, unknown>;
 }): Promise<void> {
+  const supabaseUrl =
+    process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!supabaseUrl || !serviceRoleKey) {
+    // Missing admin credentials; skip audit in this environment
+    return;
+  }
   try {
     const actorEmail = await getAuthenticatedUserEmail(params.request);
     const origin =
@@ -69,10 +77,7 @@ export async function auditAdminAction(params: {
       params.request.headers.get("x-request-id") ||
       null;
 
-    const service = createServiceClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+    const service = createServiceClient(supabaseUrl, serviceRoleKey);
 
     await service.from("system_logs").insert({
       event_type: params.eventType,

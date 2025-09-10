@@ -1,15 +1,8 @@
 import "server-only";
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
-import {
-  triggerVideoDiscovery,
-  triggerCommentHarvesting,
-  activateKillSwitch,
-  deactivateKillSwitch,
-  triggerHealthCheck,
-  triggerMaintenanceCleanup,
-  triggerDiscoveryBackfill,
-} from "../../inngest";
+import { inngest } from "../../inngest/client";
+import type { Events } from "../../inngest/types";
 
 function getAdminSupabase() {
   const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -155,10 +148,13 @@ export class InngestAdmin {
    */
   static async activateEmergencyStop(reason: string, requestedBy: string) {
     try {
-      await activateKillSwitch({
-        reason,
-        requestedBy,
-        timestamp: new Date().toISOString(),
+      await inngest.send({
+        name: "tiktok/system.kill_switch",
+        data: {
+          reason,
+          requestedBy,
+          timestamp: new Date().toISOString(),
+        } satisfies Events["tiktok/system.kill_switch"]["data"],
       });
 
       return { success: true, message: "Kill switch activated" };
@@ -173,9 +169,12 @@ export class InngestAdmin {
    */
   static async deactivateEmergencyStop(reason: string, requestedBy: string) {
     try {
-      await deactivateKillSwitch({
-        reason,
-        requestedBy,
+      await inngest.send({
+        name: "tiktok/system.deactivate_kill_switch",
+        data: {
+          reason,
+          requestedBy,
+        } satisfies Events["tiktok/system.deactivate_kill_switch"]["data"],
       });
 
       return { success: true, message: "Kill switch deactivated" };
@@ -196,10 +195,13 @@ export class InngestAdmin {
     } = {}
   ) {
     try {
-      await triggerVideoDiscovery({
-        videoId: options.videoId,
-        forceRefresh: options.forceRefresh || false,
-        limit: options.limit || 50,
+      await inngest.send({
+        name: "tiktok/video.discovery.manual",
+        data: {
+          videoId: options.videoId,
+          forceRefresh: options.forceRefresh || false,
+          limit: options.limit || 50,
+        } satisfies Events["tiktok/video.discovery.manual"]["data"],
       });
 
       return { success: true, message: "Discovery job triggered" };
@@ -214,10 +216,13 @@ export class InngestAdmin {
    */
   static async triggerHarvesting(videoId: string, maxPages: number = 2) {
     try {
-      await triggerCommentHarvesting({
-        videoId,
-        maxPages,
-        delayBetweenPages: 1000,
+      await inngest.send({
+        name: "tiktok/comment.harvest",
+        data: {
+          videoId,
+          maxPages,
+          delayBetweenPages: 1000,
+        } satisfies Events["tiktok/comment.harvest"]["data"],
       });
 
       return { success: true, message: "Harvesting job triggered" };
@@ -232,7 +237,13 @@ export class InngestAdmin {
    */
   static async triggerBackfill(days: number, limit: number = 100) {
     try {
-      await triggerDiscoveryBackfill({ days, limit });
+      await inngest.send({
+        name: "tiktok/video.discovery.backfill",
+        data: {
+          days,
+          limit,
+        } satisfies Events["tiktok/video.discovery.backfill"]["data"],
+      });
       return { success: true, message: "Backfill job triggered" };
     } catch (error) {
       console.error("Failed to trigger backfill:", error);
@@ -245,7 +256,7 @@ export class InngestAdmin {
    */
   static async runHealthCheck() {
     try {
-      await triggerHealthCheck();
+      await inngest.send({ name: "tiktok/system.health_check", data: {} });
 
       return { success: true, message: "Health check triggered" };
     } catch (error) {
@@ -259,7 +270,12 @@ export class InngestAdmin {
    */
   static async runMaintenance(daysToKeep: number = 90) {
     try {
-      await triggerMaintenanceCleanup(daysToKeep);
+      await inngest.send({
+        name: "tiktok/maintenance.cleanup",
+        data: {
+          daysToKeep,
+        } satisfies Events["tiktok/maintenance.cleanup"]["data"],
+      });
 
       return { success: true, message: "Maintenance cleanup triggered" };
     } catch (error) {
