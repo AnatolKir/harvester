@@ -14,9 +14,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY . .
 
-# Create non-root user
-RUN useradd -m -u 1000 worker && chown -R worker:worker /app
-USER worker
+# Switch to pre-existing non-root user provided by Playwright image
+RUN chown -R pwuser:pwuser /app
+USER pwuser
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
