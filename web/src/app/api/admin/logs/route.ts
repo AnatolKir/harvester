@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 import { NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { withAdminGuard } from "@/lib/security/admin";
