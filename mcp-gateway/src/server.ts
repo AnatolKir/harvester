@@ -6,6 +6,7 @@ import { logger } from './utils/logger';
 import { requestLogger } from './middleware/requestLogger';
 import { errorHandler } from './middleware/errorHandler';
 import { healthRouter } from './routes/health';
+import { inngestRouter } from './routes/inngest';
 import toolRegistry from './tools/registry';
 
 export class Server {
@@ -57,6 +58,9 @@ export class Server {
   private setupRoutes(): void {
     // Health check routes
     this.app.use('/health', healthRouter);
+    
+    // Inngest integration routes
+    this.app.use('/api/inngest', inngestRouter);
 
     // Main MCP tool execution endpoint
     this.app.post('/mcp', async (req: Request, res: Response, next) => {
