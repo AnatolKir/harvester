@@ -342,14 +342,19 @@ export function withWebhookSecurity<TRequest extends NextRequest>(
     context: SecurityContext
   ) => Promise<NextResponse>
 ) {
-  return withSecurity(handler, {
-    requireAuth: true,
-    rateLimitConfig: { authenticated: false }, // Use stricter rate limiting for webhooks
-    validatePayload: true,
-    maxPayloadSize: 512 * 1024, // 512KB max for webhooks
-    allowedMethods: ["POST"],
-    corsEnabled: true,
-  });
+  return withSecurity(
+    async (request: NextRequest, context: SecurityContext) => {
+      return handler(request as TRequest, context);
+    },
+    {
+      requireAuth: true,
+      rateLimitConfig: { authenticated: false }, // Use stricter rate limiting for webhooks
+      validatePayload: true,
+      maxPayloadSize: 512 * 1024, // 512KB max for webhooks
+      allowedMethods: ["POST"],
+      corsEnabled: true,
+    }
+  );
 }
 
 /**
