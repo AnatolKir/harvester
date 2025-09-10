@@ -12,6 +12,11 @@ export const GET = withAdminGuard(async (request: NextRequest) => {
     const jobType = url.searchParams.get("type");
     const hoursBack = parseInt(url.searchParams.get("hours") || "24");
 
+    const hasAdminSupabase = Boolean(
+      process.env.NEXT_PUBLIC_SUPABASE_URL &&
+        process.env.SUPABASE_SERVICE_ROLE_KEY
+    );
+
     const [
       systemHealth,
       jobMetrics,
@@ -20,20 +25,24 @@ export const GET = withAdminGuard(async (request: NextRequest) => {
       mcpCircuitBreaker,
       backfillCheckpoint,
     ] = await Promise.all([
-      InngestAdmin.getSystemHealth(),
-      InngestAdmin.getJobMetrics(jobType || undefined, hoursBack),
-      InngestAdmin.getActiveJobs(),
-      InngestAdmin.getRecentLogs(20),
+      hasAdminSupabase ? InngestAdmin.getSystemHealth() : Promise.resolve(null),
+      hasAdminSupabase
+        ? InngestAdmin.getJobMetrics(jobType || undefined, hoursBack)
+        : Promise.resolve([]),
+      hasAdminSupabase ? InngestAdmin.getActiveJobs() : Promise.resolve([]),
+      hasAdminSupabase ? InngestAdmin.getRecentLogs(20) : Promise.resolve([]),
       getGlobalMcpBreaker().getStatus(),
-      (async () => {
-        const supabase = await createClient();
-        const { data } = await supabase
-          .from("system_config")
-          .select("value, updated_at")
-          .eq("key", "discovery_backfill_checkpoint")
-          .maybeSingle<{ value: unknown; updated_at: string }>();
-        return data ?? null;
-      })(),
+      hasAdminSupabase
+        ? (async () => {
+            const supabase = await createClient();
+            const { data } = await supabase
+              .from("system_config")
+              .select("value, updated_at")
+              .eq("key", "discovery_backfill_checkpoint")
+              .maybeSingle<{ value: unknown; updated_at: string }>();
+            return data ?? null;
+          })()
+        : Promise.resolve(null),
     ]);
 
     return NextResponse.json({

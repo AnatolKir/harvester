@@ -7,7 +7,11 @@ import { withAdminGuard, auditAdminAction } from "@/lib/security/admin";
 // GET /api/admin/config - Get system configuration
 export const GET = withAdminGuard(async (_request: NextRequest) => {
   try {
-    const config = await InngestAdmin.getSystemConfig();
+    const hasAdminSupabase = Boolean(
+      process.env.NEXT_PUBLIC_SUPABASE_URL &&
+        process.env.SUPABASE_SERVICE_ROLE_KEY
+    );
+    const config = hasAdminSupabase ? await InngestAdmin.getSystemConfig() : [];
 
     return NextResponse.json({
       success: true,
@@ -28,6 +32,15 @@ export const GET = withAdminGuard(async (_request: NextRequest) => {
 // POST /api/admin/config - Update system configuration
 export const POST = withAdminGuard(async (request: NextRequest) => {
   try {
+    if (
+      !process.env.NEXT_PUBLIC_SUPABASE_URL ||
+      !process.env.SUPABASE_SERVICE_ROLE_KEY
+    ) {
+      return NextResponse.json(
+        { success: false, error: "Admin configuration not available" },
+        { status: 503 }
+      );
+    }
     const body = await request.json();
     const { key, value, description } = body;
 
