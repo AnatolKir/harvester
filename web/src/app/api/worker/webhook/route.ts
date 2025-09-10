@@ -1,4 +1,4 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/types/database";
 import { WorkerWebhookSchema } from "@/lib/validations";
@@ -160,7 +160,7 @@ async function handleJobCompletionActions(
 
 // Handle OPTIONS requests for CORS
 export async function OPTIONS(_request: NextRequest) {
-  const response = new Response(null, { status: 200 });
+  const response = new NextResponse(null, { status: 200 });
   return addCorsHeaders(response);
 }
 
