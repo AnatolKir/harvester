@@ -2,7 +2,14 @@ import { inngest } from '../client';
 import { JobResult } from '../types';
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+function getServiceSupabase() {
+  const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) {
+    throw new Error('Supabase service credentials are not configured');
+  }
+  return createClient(url, key);
+}
 
 const SLACK_WEBHOOK_URL = process.env.SLACK_WEBHOOK_URL;
 const SLACK_ALERTS_ENABLED = process.env.SLACK_ALERTS_ENABLED === 'true';
@@ -32,6 +39,7 @@ export const killSwitchJob = inngest.createFunction(
   { id: 'system-kill-switch', name: 'System Kill Switch', retries: 0 },
   { event: 'tiktok/system.kill_switch' },
   async ({ event, step, logger }) => {
+    const supabase = getServiceSupabase();
     const { reason, requestedBy, timestamp } = event.data;
     logger.warn('Kill switch activated', { reason, requestedBy, timestamp });
     await step.run('activate-kill-switch', async () => {
@@ -74,6 +82,7 @@ export const deactivateKillSwitchJob = inngest.createFunction(
   { id: 'system-deactivate-kill-switch', name: 'Deactivate System Kill Switch', retries: 0 },
   { event: 'tiktok/system.deactivate_kill_switch' },
   async ({ event, step, logger }) => {
+    const supabase = getServiceSupabase();
     const { reason, requestedBy } = event.data;
     logger.info('Deactivating kill switch', { reason, requestedBy });
     await step.run('deactivate-kill-switch', async () => {
@@ -100,6 +109,7 @@ export const healthCheckJob = inngest.createFunction(
   { id: 'system-health-check', name: 'System Health Check', retries: 1 },
   [{ event: 'tiktok/system.health_check' }, { cron: '*/5 * * * *' }],
   async ({ step, logger }) => {
+    const supabase = getServiceSupabase();
     logger.info('Starting system health check');
     const healthData = await step.run('collect-health-metrics', async () => {
       const { data: killSwitchConfig } = await supabase
@@ -163,6 +173,7 @@ export const deadLetterQueueJob = inngest.createFunction(
   { id: 'system-dead-letter-queue', name: 'Dead Letter Queue Processor', retries: 1 },
   { event: 'tiktok/system.retry' },
   async ({ event, step, logger }) => {
+    const supabase = getServiceSupabase();
     const { originalEventName, originalPayload, attempt, lastError } = event.data as any;
     logger.warn('Processing dead letter queue item', { originalEventName, attempt, lastError });
     await step.run('log-failed-job', async () => {
@@ -183,6 +194,7 @@ export const jobStatusJob = inngest.createFunction(
   { id: 'system-job-status', name: 'Job Status Tracking', retries: 1 },
   { event: 'tiktok/job.status.update' },
   async ({ event, step }) => {
+    const supabase = getServiceSupabase();
     const { jobId, status, metadata } = event.data as any;
     await step.run('update-job-status', async () => {
       await supabase.from('job_status').upsert(
@@ -198,6 +210,7 @@ export const maintenanceCleanupJob = inngest.createFunction(
   { id: 'maintenance-cleanup', name: 'Maintenance Data Cleanup', retries: 1 },
   [{ event: 'tiktok/maintenance.cleanup' }, { cron: '0 2 * * 0' }],
   async ({ event, step }) => {
+    const supabase = getServiceSupabase();
     const { daysToKeep = 90 } = event.data as any;
     await step.run('cleanup-old-data', async () => {
       await supabase.rpc('cleanup_old_data', { days_to_keep: daysToKeep });

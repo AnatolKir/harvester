@@ -9,7 +9,14 @@ import { alertJobError } from '../../src/lib/alerts';
 import { extractDomains, dedupeNormalized } from '../../src/lib/extract/domain';
 import { generateCorrelationId } from '../utils';
 
-const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+function getServiceSupabase() {
+  const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) {
+    throw new Error('Supabase service credentials are not configured');
+  }
+  return createClient(url, key);
+}
 
 export const commentHarvestingJob = inngest.createFunction(
   {
@@ -22,6 +29,7 @@ export const commentHarvestingJob = inngest.createFunction(
   },
   { event: 'tiktok/comment.harvest' },
   async ({ event, step, logger, attempt }) => {
+    const supabase = getServiceSupabase();
     const correlationId = generateCorrelationId();
     const { videoId, maxPages = 2, delayBetweenPages = 1000 } = event.data;
     const jobId = `harvesting-${videoId}-${Date.now()}`;
@@ -312,6 +320,7 @@ export const domainExtractionJob = inngest.createFunction(
   },
   { event: 'tiktok/domain.extract' },
   async ({ event, step, logger, attempt }) => {
+    const supabase = getServiceSupabase();
     const { commentId, videoId, commentText } = event.data;
 
     logger.info('Starting domain extraction job', {

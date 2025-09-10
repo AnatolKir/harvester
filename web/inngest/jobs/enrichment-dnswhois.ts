@@ -5,7 +5,14 @@ import { acquireHttpEnrichmentToken } from '../../src/lib/rate-limit/buckets';
 import * as dns from 'node:dns/promises';
 import type { MxRecord } from 'node:dns';
 
-const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+function getServiceSupabase() {
+  const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) {
+    throw new Error('Supabase service credentials are not configured');
+  }
+  return createClient(url, key);
+}
 
 async function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
   let timeoutHandle: NodeJS.Timeout | null = null;
@@ -114,6 +121,7 @@ export const dnsWhoisEnrichmentJob = inngest.createFunction(
   },
   [{ event: 'domain/dnswhois.enrich.scheduled' }, { cron: '* * * * *' }],
   async ({ step, logger, attempt }) => {
+    const supabase = getServiceSupabase();
     logger.info('Starting DNS/WHOIS enrichment job', { attempt });
 
     const killSwitchActive = await step.run('check-kill-switch', async () => {

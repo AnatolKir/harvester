@@ -6,7 +6,14 @@ import { acquireDiscoveryToken } from '../../src/lib/rate-limit/buckets';
 import { fetchPromotedVideoIds } from '../../src/lib/mcp/discovery';
 import { alertJobError } from '../../src/lib/alerts';
 
-const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+function getServiceSupabase() {
+  const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) {
+    throw new Error('Supabase service credentials are not configured');
+  }
+  return createClient(url, key);
+}
 
 type BackfillCheckpoint = {
   daysRemaining: number;
@@ -23,6 +30,7 @@ export const discoveryBackfillJob = inngest.createFunction(
   },
   { event: 'tiktok/video.discovery.backfill' },
   async ({ event, step, logger, attempt }) => {
+    const supabase = getServiceSupabase();
     const { days = 1, limit = 100 } = (event as any).data || {};
     const jobId = `discovery-backfill-${Date.now()}`;
 

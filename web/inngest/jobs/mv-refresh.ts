@@ -2,7 +2,14 @@ import { inngest } from '../client';
 import { JobResult } from '../types';
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+function getServiceSupabase() {
+  const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) {
+    throw new Error('Supabase service credentials are not configured');
+  }
+  return createClient(url, key);
+}
 
 export const materializedViewsRefreshJob = inngest.createFunction(
   {
@@ -13,6 +20,7 @@ export const materializedViewsRefreshJob = inngest.createFunction(
   },
   [{ cron: '*/5 * * * *' }],
   async ({ step, logger }) => {
+    const supabase = getServiceSupabase();
     const enabled = String(process.env.MATVIEWS_ENABLED || 'false').toLowerCase() === 'true';
     if (!enabled) {
       logger.info('MATVIEWS_ENABLED is false; skipping refresh');
