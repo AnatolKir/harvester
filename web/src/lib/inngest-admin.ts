@@ -22,8 +22,9 @@ export class InngestAdmin {
    */
   static async getSystemHealth() {
     try {
-      const { data, error } =
-        await supabase.rpc<unknown[]>("get_system_health");
+      const { data, error } = await supabase
+        .rpc("get_system_health")
+        .returns<unknown[]>();
 
       if (error) throw error;
 
@@ -39,10 +40,12 @@ export class InngestAdmin {
    */
   static async getJobMetrics(jobType?: string, hoursBack: number = 24) {
     try {
-      const { data, error } = await supabase.rpc<unknown[]>("get_job_metrics", {
-        job_type_filter: jobType || null,
-        hours_back: hoursBack,
-      } as unknown as never);
+      const { data, error } = await supabase
+        .rpc("get_job_metrics", {
+          job_type_filter: jobType || null,
+          hours_back: hoursBack,
+        } as unknown as never)
+        .returns<unknown[]>();
 
       if (error) throw error;
 
