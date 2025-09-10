@@ -91,18 +91,16 @@ export function withSecurity<T extends unknown[]>(
       // 3. Rate limiting
       let rateLimitHeaders: Record<string, string> | undefined;
       if (options.rateLimitConfig !== undefined) {
-        const rateLimitResult = await rateLimitMiddleware(request, {
+        const rl = await rateLimitMiddleware(request, {
           ...options.rateLimitConfig,
           identifier: clientId,
         });
 
-        if ("error" in rateLimitResult) {
-          return rateLimitResult;
+        if ("error" in (rl as Record<string, unknown>)) {
+          return rl as unknown as NextResponse;
         }
-        rateLimitHeaders = rateLimitResult.headers as unknown as Record<
-          string,
-          string
-        >;
+        rateLimitHeaders = (rl as { headers: Record<string, string> })
+          .headers as unknown as Record<string, string>;
       }
 
       // 4. Origin / CORS checks for non-GET
