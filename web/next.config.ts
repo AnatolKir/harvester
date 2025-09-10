@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import path from "path";
 
 const nextConfig: NextConfig = {
   typescript: {
@@ -19,6 +20,8 @@ const nextConfig: NextConfig = {
   },
   // Configure for Vercel deployment
   output: "standalone",
+  // Silence monorepo root inference warning by pinning root
+  outputFileTracingRoot: path.join(__dirname, ".."),
 };
 
 export default nextConfig;
