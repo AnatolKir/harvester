@@ -1,6 +1,6 @@
 import { serve } from 'inngest/next';
-import { inngest } from '@/inngest/client';
-import { allJobs } from '@/inngest/jobs';
+import { inngest } from '../../../inngest/client';
+import { allJobs } from '../../../inngest';
 
 // Create the Inngest HTTP handler
 export const { GET, POST, PUT } = serve({
