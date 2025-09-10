@@ -145,14 +145,13 @@ async function handleDomainGet(
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-  const { data: timeSeriesData, error: timeSeriesError } = await supabase.rpc(
-    "get_domain_time_series",
-    {
-      p_domain_id: id,
-      p_start_date: thirtyDaysAgo.toISOString(),
-      p_end_date: new Date().toISOString(),
-    } as unknown as never
-  );
+  const { data: timeSeriesData, error: timeSeriesError } = await supabase.rpc<
+    { date: string; mention_count: number }[]
+  >("get_domain_time_series", {
+    p_domain_id: id,
+    p_start_date: thirtyDaysAgo.toISOString(),
+    p_end_date: new Date().toISOString(),
+  } as unknown as never);
 
   // If the RPC doesn't exist, we'll create a fallback query
   let timeSeries: Array<{ date: string; mention_count: number }> = [];

@@ -86,7 +86,10 @@ async function handleStatsGet(_request: NextRequest) {
       .limit(1),
 
     // Time series data for the last 7 days
-    supabase.rpc("get_stats_time_series", { p_days: 7 } as unknown as never),
+    supabase.rpc<{ date: string; domains: number; mentions: number }[]>(
+      "get_stats_time_series",
+      { p_days: 7 } as unknown as never
+    ),
   ]);
 
   // Handle results and fallbacks
