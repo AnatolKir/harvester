@@ -59,7 +59,7 @@ export const httpEnrichmentJob = inngest.createFunction(
     id: 'http-enrichment',
     name: 'Domain HTTP Enrichment',
     retries: 2,
-    concurrency: { limit: 5 },
+    concurrency: { limit: 10 },
   },
   [
     { event: 'domain/http.enrich.scheduled' },

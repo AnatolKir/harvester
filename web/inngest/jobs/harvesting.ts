@@ -24,7 +24,7 @@ export const commentHarvestingJob = inngest.createFunction(
     name: 'TikTok Comment Harvesting',
     retries: 3,
     concurrency: {
-      limit: 5,
+      limit: 30,
     },
   },
   { event: 'tiktok/comment.harvest' },

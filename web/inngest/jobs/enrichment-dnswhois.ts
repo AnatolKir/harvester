@@ -117,7 +117,7 @@ export const dnsWhoisEnrichmentJob = inngest.createFunction(
     id: 'dns-whois-enrichment',
     name: 'Domain DNS/WHOIS Enrichment',
     retries: 2,
-    concurrency: { limit: 5 },
+    concurrency: { limit: 10 },
   },
   [{ event: 'domain/dnswhois.enrich.scheduled' }, { cron: '* * * * *' }],
   async ({ step, logger, attempt }) => {
