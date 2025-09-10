@@ -36,6 +36,14 @@ import {
   maintenanceCleanupJob,
 } from './system';
 
+// Import monitoring jobs
+import {
+  healthCheck,
+  domainExtractionCheck,
+  weeklySummary,
+  criticalMonitoring,
+} from '../monitoring';
+
 export const allJobs = [
   // Discovery jobs
   videoDiscoveryJob,
@@ -56,6 +64,12 @@ export const allJobs = [
   deadLetterQueueJob,
   jobStatusJob,
   maintenanceCleanupJob,
+
+  // Monitoring jobs
+  healthCheck,
+  domainExtractionCheck,
+  weeklySummary,
+  criticalMonitoring,
 ];
 
 

@@ -26,7 +26,7 @@ export interface ErrorDetails {
   stack?: string;
   code?: string;
   statusCode?: number;
-  cause?: any;
+  cause?: unknown;
 }
 
 export interface LogEvent {
@@ -54,9 +54,9 @@ class CentralizedLogger {
       name: error.name,
       message: error.message,
       stack: error.stack,
-      code: (error as any).code,
-      statusCode: (error as any).statusCode,
-      cause: (error as any).cause,
+      code: (error as Error & { code?: string }).code,
+      statusCode: (error as Error & { statusCode?: number }).statusCode,
+      cause: (error as Error & { cause?: unknown }).cause,
     };
 
     const fullContext: ErrorContext = {
@@ -130,7 +130,7 @@ class CentralizedLogger {
       name.includes("connection") ||
       message.includes("fatal") ||
       message.includes("critical") ||
-      (error as any).statusCode >= 500
+      (error as Error & { statusCode?: number }).statusCode! >= 500
     ) {
       return "critical";
     }
@@ -140,7 +140,7 @@ class CentralizedLogger {
       name.includes("validation") ||
       name.includes("auth") ||
       message.includes("unauthorized") ||
-      (error as any).statusCode >= 400
+      (error as Error & { statusCode?: number }).statusCode! >= 400
     ) {
       return "high";
     }
@@ -185,33 +185,31 @@ class CentralizedLogger {
   /**
    * Log to database for persistence
    */
-  private async logToDatabase(logEvent: LogEvent): Promise<void> {
-    try {
-      // This would integrate with your Supabase client
-      const { createClient } = await import("@/lib/supabase/server");
-      const supabase = await createClient();
-
-      await supabase.from("system_logs").insert({
-        event_type: "error",
-        level: logEvent.level,
-        message: logEvent.error.message,
-        metadata: {
-          error: logEvent.error,
-          context: logEvent.context,
-          fingerprint: logEvent.fingerprint,
-        },
-        created_at: logEvent.timestamp,
-      });
-    } catch (error) {
-      // Silent fail - don't throw errors from logging
-      console.error("Database logging failed:", error);
-    }
+  private async logToDatabase(_logEvent: LogEvent): Promise<void> {
+    // TODO: Implement database logging when system_logs table is created
+    // try {
+    //   const { createClient } = await import("@/lib/supabase/server");
+    //   const supabase = await createClient();
+    //   await supabase.from("system_logs").insert({
+    //     event_type: "error",
+    //     level: logEvent.level,
+    //     message: logEvent.error.message,
+    //     metadata: {
+    //       error: logEvent.error,
+    //       context: logEvent.context,
+    //       fingerprint: logEvent.fingerprint,
+    //     },
+    //     created_at: logEvent.timestamp,
+    //   });
+    // } catch (error) {
+    //   console.error("Database logging failed:", error);
+    // }
   }
 
   /**
    * Log to Sentry (when enabled)
    */
-  private logToSentry(logEvent: LogEvent): void {
+  private logToSentry(_logEvent: LogEvent): void {
     try {
       // This would integrate with Sentry SDK
       // import * as Sentry from '@sentry/nextjs';
@@ -273,7 +271,7 @@ export const logger = new CentralizedLogger();
  * Higher-order function to wrap API handlers with automatic error logging
  */
 export function withErrorLogging<T extends unknown[]>(
-  handler: (...args: T) => Promise<any>,
+  handler: (...args: T) => Promise<unknown>,
   context: Partial<ErrorContext> = {}
 ) {
   return async (...args: T) => {

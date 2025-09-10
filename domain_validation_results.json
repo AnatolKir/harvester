@@ -1,0 +1,502 @@
+{
+  "timestamp": "2025-09-10T16:38:53.522891",
+  "metrics": {
+    "precision": 0.9743589743589743,
+    "recall": 1.0,
+    "f1_score": 0.9870129870129869,
+    "total_tests": 48,
+    "correct_tests": 47,
+    "accuracy": 0.9791666666666666,
+    "category_stats": {
+      "standard_mention": {
+        "correct": 1,
+        "total": 1
+      },
+      "www_prefix": {
+        "correct": 1,
+        "total": 1
+      },
+      "subdomain_https": {
+        "correct": 1,
+        "total": 1
+      },
+      "multiple_domains": {
+        "correct": 1,
+        "total": 1
+      },
+      "comma_separated": {
+        "correct": 1,
+        "total": 1
+      },
+      "url_shortener": {
+        "correct": 2,
+        "total": 2
+      },
+      "complex_url": {
+        "correct": 1,
+        "total": 1
+      },
+      "url_with_path": {
+        "correct": 1,
+        "total": 1
+      },
+      "email_not_domain": {
+        "correct": 0,
+        "total": 1
+      },
+      "price_not_domain": {
+        "correct": 1,
+        "total": 1
+      },
+      "version_not_domain": {
+        "correct": 1,
+        "total": 1
+      },
+      "time_not_domain": {
+        "correct": 1,
+        "total": 1
+      },
+      "blacklisted_social": {
+        "correct": 1,
+        "total": 1
+      },
+      "blacklisted_platform": {
+        "correct": 1,
+        "total": 1
+      },
+      "emoji_content": {
+        "correct": 1,
+        "total": 1
+      },
+      "caps_exclamation": {
+        "correct": 1,
+        "total": 1
+      },
+      "parentheses": {
+        "correct": 1,
+        "total": 1
+      },
+      "brackets": {
+        "correct": 1,
+        "total": 1
+      },
+      "typo_domain": {
+        "correct": 1,
+        "total": 1
+      },
+      "double_dot": {
+        "correct": 1,
+        "total": 1
+      },
+      "short_tld": {
+        "correct": 1,
+        "total": 1
+      },
+      "country_tld": {
+        "correct": 1,
+        "total": 1
+      },
+      "german_tld": {
+        "correct": 1,
+        "total": 1
+      },
+      "ip_address_local": {
+        "correct": 1,
+        "total": 1
+      },
+      "invalid_ip": {
+        "correct": 1,
+        "total": 1
+      },
+      "suspicious_tld": {
+        "correct": 1,
+        "total": 1
+      },
+      "bio_typo": {
+        "correct": 1,
+        "total": 1
+      },
+      "leetspeak": {
+        "correct": 1,
+        "total": 1
+      },
+      "spelled_out": {
+        "correct": 1,
+        "total": 1
+      },
+      "bracket_dot": {
+        "correct": 1,
+        "total": 1
+      },
+      "paren_dot": {
+        "correct": 1,
+        "total": 1
+      },
+      "multiple_sentences": {
+        "correct": 1,
+        "total": 1
+      },
+      "exclamation_separated": {
+        "correct": 1,
+        "total": 1
+      },
+      "api_subdomain": {
+        "correct": 1,
+        "total": 1
+      },
+      "blog_subdomain": {
+        "correct": 1,
+        "total": 1
+      },
+      "nested_subdomain": {
+        "correct": 1,
+        "total": 1
+      },
+      "new_tld_store": {
+        "correct": 1,
+        "total": 1
+      },
+      "new_tld_app": {
+        "correct": 1,
+        "total": 1
+      },
+      "new_tld_tech": {
+        "correct": 1,
+        "total": 1
+      },
+      "spam_earnings": {
+        "correct": 1,
+        "total": 1
+      },
+      "giveaway_spam": {
+        "correct": 1,
+        "total": 1
+      },
+      "promo_code": {
+        "correct": 1,
+        "total": 1
+      },
+      "affiliate_links": {
+        "correct": 1,
+        "total": 1
+      },
+      "merch_promotion": {
+        "correct": 1,
+        "total": 1
+      },
+      "content_promotion": {
+        "correct": 1,
+        "total": 1
+      },
+      "crypto_spam": {
+        "correct": 1,
+        "total": 1
+      },
+      "nft_spam": {
+        "correct": 1,
+        "total": 1
+      }
+    },
+    "total_true_positives": 38,
+    "total_false_positives": 1,
+    "total_false_negatives": 0
+  },
+  "problem_patterns": {
+    "false_positive_patterns": {
+      "other": 1
+    },
+    "false_negative_patterns": {},
+    "total_failures": 1
+  },
+  "test_results": [
+    {
+      "text": "Check out example.com for more info!",
+      "expected": [
+        "example.com"
+      ],
+      "extracted": [
+        "example.com"
+      ],
+      "category": "standard_mention",
+      "is_correct": true,
+      "true_positives": [
+        "example.com"
+      ],
+      "false_positives": [],
+      "false_negatives": [],
+      "precision": 1.0,
+      "recall": 1.0
+    },
+    {
+      "text": "Visit www.mysite.org today!",
+      "expected": [
+        "mysite.org"
+      ],
+      "extracted": [
+        "mysite.org"
+      ],
+      "category": "www_prefix",
+      "is_correct": true,
+      "true_positives": [
+        "mysite.org"
+      ],
+      "false_positives": [],
+      "false_negatives": [],
+      "precision": 1.0,
+      "recall": 1.0
+    },
+    {
+      "text": "Go to https://shop.example.com now",
+      "expected": [
+        "shop.example.com"
+      ],
+      "extracted": [
+        "shop.example.com"
+      ],
+      "category": "subdomain_https",
+      "is_correct": true,
+      "true_positives": [
+        "shop.example.com"
+      ],
+      "false_positives": [],
+      "false_negatives": [],
+      "precision": 1.0,
+      "recall": 1.0
+    },
+    {
+      "text": "Try site1.com and site2.net for deals",
+      "expected": [
+        "site1.com",
+        "site2.net"
+      ],
+      "extracted": [
+        "site1.com",
+        "site2.net"
+      ],
+      "category": "multiple_domains",
+      "is_correct": true,
+      "true_positives": [
+        "site1.com",
+        "site2.net"
+      ],
+      "false_positives": [],
+      "false_negatives": [],
+      "precision": 1.0,
+      "recall": 1.0
+    },
+    {
+      "text": "Visit example.com, test.org, and demo.net",
+      "expected": [
+        "example.com",
+        "test.org",
+        "demo.net"
+      ],
+      "extracted": [
+        "demo.net",
+        "example.com",
+        "test.org"
+      ],
+      "category": "comma_separated",
+      "is_correct": true,
+      "true_positives": [
+        "example.com",
+        "demo.net",
+        "test.org"
+      ],
+      "false_positives": [],
+      "false_negatives": [],
+      "precision": 1.0,
+      "recall": 1.0
+    },
+    {
+      "text": "Link in bio: bit.ly/abc123",
+      "expected": [
+        "bit.ly"
+      ],
+      "extracted": [
+        "bit.ly"
+      ],
+      "category": "url_shortener",
+      "is_correct": true,
+      "true_positives": [
+        "bit.ly"
+      ],
+      "false_positives": [],
+      "false_negatives": [],
+      "precision": 1.0,
+      "recall": 1.0
+    },
+    {
+      "text": "Check tinyurl.com/deal",
+      "expected": [
+        "tinyurl.com"
+      ],
+      "extracted": [
+        "tinyurl.com"
+      ],
+      "category": "url_shortener",
+      "is_correct": true,
+      "true_positives": [
+        "tinyurl.com"
+      ],
+      "false_positives": [],
+      "false_negatives": [],
+      "precision": 1.0,
+      "recall": 1.0
+    },
+    {
+      "text": "https://example.com/product?id=123#review",
+      "expected": [
+        "example.com"
+      ],
+      "extracted": [
+        "example.com"
+      ],
+      "category": "complex_url",
+      "is_correct": true,
+      "true_positives": [
+        "example.com"
+      ],
+      "false_positives": [],
+      "false_negatives": [],
+      "precision": 1.0,
+      "recall": 1.0
+    },
+    {
+      "text": "www.site.com/path/to/page",
+      "expected": [
+        "site.com"
+      ],
+      "extracted": [
+        "site.com"
+      ],
+      "category": "url_with_path",
+      "is_correct": true,
+      "true_positives": [
+        "site.com"
+      ],
+      "false_positives": [],
+      "false_negatives": [],
+      "precision": 1.0,
+      "recall": 1.0
+    },
+    {
+      "text": "Email me at user@gmail.com",
+      "expected": [],
+      "extracted": [
+        "mail.com"
+      ],
+      "category": "email_not_domain",
+      "is_correct": false,
+      "true_positives": [],
+      "false_positives": [
+        "mail.com"
+      ],
+      "false_negatives": [],
+      "precision": 0.0,
+      "recall": 0.0
+    }
+  ],
+  "database_results": [
+    {
+      "text": "Check out myprofit.io for amazing deals!",
+      "stored_domain": "myprofit.io",
+      "extracted_domains": [
+        "myprofit.io"
+      ],
+      "domain_found": true,
+      "extraction_count": 1,
+      "category": "database_sample"
+    },
+    {
+      "text": "I work with mywealth.space and love their products",
+      "stored_domain": "mywealth.space",
+      "extracted_domains": [
+        "mywealth.space"
+      ],
+      "domain_found": true,
+      "extraction_count": 1,
+      "category": "database_sample"
+    },
+    {
+      "text": "Use code SAVE20 at express433.top",
+      "stored_domain": "express433.top",
+      "extracted_domains": [
+        "express433.top"
+      ],
+      "domain_found": true,
+      "extraction_count": 1,
+      "category": "database_sample"
+    },
+    {
+      "text": "soft842.biz has the best selection",
+      "stored_domain": "soft842.biz",
+      "extracted_domains": [
+        "soft842.biz"
+      ],
+      "domain_found": true,
+      "extraction_count": 1,
+      "category": "database_sample"
+    },
+    {
+      "text": "Use code SAVE20 at lookhub.co",
+      "stored_domain": "lookhub.co",
+      "extracted_domains": [
+        "lookhub.co"
+      ],
+      "domain_found": true,
+      "extraction_count": 1,
+      "category": "database_sample"
+    },
+    {
+      "text": "I got mine from marketzone.store and it's incredible",
+      "stored_domain": "marketzone.store",
+      "extracted_domains": [
+        "marketzone.store"
+      ],
+      "domain_found": true,
+      "extraction_count": 1,
+      "category": "database_sample"
+    },
+    {
+      "text": "webzone.shop has the best selection",
+      "stored_domain": "webzone.shop",
+      "extracted_domains": [
+        "webzone.shop"
+      ],
+      "domain_found": true,
+      "extraction_count": 1,
+      "category": "database_sample"
+    },
+    {
+      "text": "Found this on soft916.club - game changer!",
+      "stored_domain": "soft916.club",
+      "extracted_domains": [
+        "soft916.club"
+      ],
+      "domain_found": true,
+      "extraction_count": 1,
+      "category": "database_sample"
+    },
+    {
+      "text": "Use code SAVE20 at getoutfit.space",
+      "stored_domain": "getoutfit.space",
+      "extracted_domains": [
+        "getoutfit.space"
+      ],
+      "domain_found": true,
+      "extraction_count": 1,
+      "category": "database_sample"
+    },
+    {
+      "text": "Found this on profit348.club - game changer!",
+      "stored_domain": "profit348.club",
+      "extracted_domains": [
+        "profit348.club"
+      ],
+      "domain_found": true,
+      "extraction_count": 1,
+      "category": "database_sample"
+    }
+  ]
+}

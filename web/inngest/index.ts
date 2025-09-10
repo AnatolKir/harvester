@@ -12,6 +12,9 @@ export * from './jobs/enrichment-http';
 export * from './jobs/enrichment-dnswhois';
 export * from './jobs/mv-refresh';
 
+// Export monitoring functions
+export * from './monitoring';
+
 // Helper functions for manual job triggers
 import { inngest } from './client';
 import { Events } from './types';
