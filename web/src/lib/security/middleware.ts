@@ -90,7 +90,7 @@ export function withSecurity<T extends unknown[]>(
 
       // 3. Rate limiting
       let rateLimitHeaders: Record<string, string> | undefined;
-      if (options.rateLimitConfig !== false) {
+      if (options.rateLimitConfig !== undefined) {
         const rateLimitResult = await rateLimitMiddleware(request, {
           ...options.rateLimitConfig,
           identifier: clientId,
@@ -385,7 +385,7 @@ function createValidationErrorResponse(
   requestId: string
 ): NextResponse {
   // Sanitize error messages to prevent information leakage
-  const errors = error.errors.reduce(
+  const errors = error.issues.reduce(
     (acc, err) => {
       const path = err.path.join(".");
       if (!acc[path]) {
