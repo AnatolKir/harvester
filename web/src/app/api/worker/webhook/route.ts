@@ -54,7 +54,7 @@ async function handleWorkerWebhook(request: NextRequest) {
   // Use upsert to handle both create and update scenarios
   const { error: jobLogError } = await supabase
     .from("job_log")
-    .upsert(jobLogData, {
+    .upsert(jobLogData as unknown as never, {
       onConflict: "id",
       ignoreDuplicates: false,
     });
