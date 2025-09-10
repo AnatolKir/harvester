@@ -3,7 +3,6 @@ import { createClient } from "@/lib/supabase/server";
 import { VideosQuerySchema } from "@/lib/validations";
 import {
   createCursorPaginatedResponse,
-  createErrorResponse,
   withErrorHandling,
   addRateLimitHeaders,
 } from "@/lib/api";
@@ -75,7 +74,7 @@ async function handleVideosGet(request: NextRequest) {
   // Order by creation date (newest first) and apply limit + 1 to check for more results
   query = query.order("created_at", { ascending: false }).limit(limit + 1);
 
-  const { data, error } = await query;
+  const { data, error } = await query.returns<Video[]>();
 
   if (error) {
     console.error("Supabase error:", error);
@@ -106,19 +105,25 @@ async function handleVideosGet(request: NextRequest) {
       // Note: comment domain counts are included in domain mentions per canonical schema
 
       // Simplified approach - get domains mentioned in this video's context
-      const { data: domainsData, error: domainsError } = await supabase
+      const { data: domainsData } = await supabase
         .from("domain_mention")
         .select("domain")
         .eq("video_id", video.video_id)
         .limit(100);
 
       const domainCounts: Record<string, number> = {};
-      (domainsData || []).forEach((row: any) => {
-        const dom = row.domain as string | null;
+      for (const row of (domainsData ?? []) as Array<{
+        domain: string | null;
+      }>) {
+        const dom = row.domain;
         if (dom) domainCounts[dom] = (domainCounts[dom] || 0) + 1;
-      });
+      }
       const uniqueDomains = Object.entries(domainCounts)
-        .map(([domain, mention_count]) => ({ id: domain, domain, mention_count }))
+        .map(([domain, mention_count]) => ({
+          id: domain,
+          domain,
+          mention_count,
+        }))
         .sort((a, b) => b.mention_count - a.mention_count)
         .slice(0, 10);
 
