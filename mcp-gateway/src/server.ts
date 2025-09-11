@@ -166,6 +166,7 @@ export class Server {
       this.server = this.app.listen(this.port, () => {
         logger.info(`🚀 MCP Gateway server started on port ${this.port}`);
         logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
+        logger.info(`Build revision: ${process.env.RAILWAY_GIT_COMMIT_SHA || 'unknown'}`);
         logger.info(`Health check: http://localhost:${this.port}/health`);
         resolve();
       });
