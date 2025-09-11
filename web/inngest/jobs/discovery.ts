@@ -109,18 +109,9 @@ export const videoDiscoveryJob = inngest.createFunction(
             }
             const res = await fetchPromotedVideoIds(mcp, {
               region: 'US',
-              keywords: [
-                'ad',
-                'sponsored',
-                'review',
-                'promo',
-                'coupon',
-                'shop',
-                'amazon',
-                'skincare',
-              ],
+              keywords: [],
               limit,
-              contentType: 'promoted',
+              contentType: 'all',
             });
             items = res;
             await breaker.onSuccess();
@@ -162,7 +153,7 @@ export const videoDiscoveryJob = inngest.createFunction(
             {
               video_id: v.video_id,
               url: v.url,
-              is_promoted: true,
+              is_promoted: null,
             },
             { onConflict: 'video_id' }
           );

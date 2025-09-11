@@ -15,6 +15,7 @@ const OutputItemSchema = z.object({
   raw_host: z.string().nullable(),
   final_host: z.string().nullable(),
   source: z.enum(['video', 'profile']),
+  is_promoted: z.boolean().default(false),
 });
 
 export type EnrichLinksInput = z.infer<typeof InputSchema>;
@@ -52,6 +53,7 @@ export const tiktokEnrichLinksTool: Tool = {
 
       for (const page of pages) {
         const html = await brightDataFetchRaw(page.url, apiToken, zone);
+        const promoted = detectPromoted(html);
         const rawLinks = extractHttpLinks(html);
         for (const raw of rawLinks) {
           const key = `${page.source}:${raw}`;
@@ -66,6 +68,7 @@ export const tiktokEnrichLinksTool: Tool = {
             raw_host: safeHost(raw),
             final_host: finalUrl ? safeHost(finalUrl) : null,
             source: page.source,
+            is_promoted: promoted,
           });
           out.push(normalized);
         }
@@ -143,6 +146,33 @@ function isLikelyOutbound(url: string): boolean {
     const u = new URL(url);
     const host = u.hostname.toLowerCase();
     return !host.includes('tiktok.com');
+  } catch {
+    return false;
+  }
+}
+
+function detectPromoted(html: string): boolean {
+  try {
+    const lower = html.toLowerCase();
+    // Common signals
+    const signals = [
+      '#ad',
+      'paid partnership',
+      'sponsored',
+      'promotion',
+      'ad:\u00a0',
+      'ad\u00a0',
+      'ad badge',
+    ];
+    for (const s of signals) {
+      if (lower.includes(s)) return true;
+    }
+    // Heuristic: presence of CTA button labels
+    const ctas = ['shop now', 'learn more', 'buy now'];
+    for (const c of ctas) {
+      if (lower.includes(c)) return true;
+    }
+    return false;
   } catch {
     return false;
   }

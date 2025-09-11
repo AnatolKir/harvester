@@ -33,7 +33,7 @@ export const linksEnrichmentJob = inngest.createFunction(
     });
 
     // Call MCP tool to extract links
-    const links = await step.run('extract-links', async () => {
+    const extraction = await step.run('extract-links', async () => {
       await acquireHttpEnrichmentToken({ identifier: 'global', logger, label: 'links_enrich' });
       const mcp = new MCPClient({
         baseUrl: process.env.MCP_BASE_URL!,
@@ -43,15 +43,20 @@ export const linksEnrichmentJob = inngest.createFunction(
       const resp = (await mcp.call('tiktok.enrich.links', {
         video_url: videoUrl,
         include_profile: includeProfile,
-      })) as { result?: Array<{ raw_url: string; final_url?: string | null; raw_host?: string | null; final_host?: string | null; source: 'video' | 'profile' }> };
+      })) as { result?: Array<{ raw_url: string; final_url?: string | null; raw_host?: string | null; final_host?: string | null; source: 'video' | 'profile'; is_promoted?: boolean }> };
 
-      const items: Array<{ raw_url: string; final_url?: string | null; raw_host?: string | null; final_host?: string | null; source: 'video' | 'profile' }>
+      const items: Array<{ raw_url: string; final_url?: string | null; raw_host?: string | null; final_host?: string | null; source: 'video' | 'profile'; is_promoted?: boolean }>
         = Array.isArray((resp as any).result) ? (resp as any).result : [];
-      return items;
+      const promoted = items.some((i) => i.is_promoted === true);
+      return { items, promoted };
     });
+
+    const links = extraction.items;
+    const isPromoted = extraction.promoted;
 
     // Persist with duplicate suppression on (video_id, raw_url)
     const inserted = await step.run('persist-outbound-links', async () => {
+      if (!isPromoted) return 0; // Skip saving links if not promoted
       let ok = 0;
       for (const l of links) {
         const { error } = await supabase
@@ -73,7 +78,14 @@ export const linksEnrichmentJob = inngest.createFunction(
       return ok;
     });
 
-    logger.info('Links enrichment completed', { videoId, extracted: links.length, inserted });
+    // Update video promotion flag based on detection
+    await step.run('update-video-promotion-flag', async () => {
+      try {
+        await supabase.from('video').upsert({ video_id: videoId, is_promoted: isPromoted } as any, { onConflict: 'video_id' });
+      } catch {}
+    });
+
+    logger.info('Links enrichment completed', { videoId, extracted: links.length, inserted, isPromoted });
 
     // Write to system_logs for admin visibility
     await step.run('log-completion', async () => {
@@ -82,7 +94,7 @@ export const linksEnrichmentJob = inngest.createFunction(
           event_type: 'job_progress',
           level: 'info',
           message: 'Links enrichment completed',
-          metadata: { videoId, extracted: links.length, inserted },
+          metadata: { videoId, extracted: links.length, inserted, isPromoted },
         });
       } catch {}
     });
