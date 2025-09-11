@@ -229,10 +229,10 @@ export const maintenanceCleanupJob = inngest.createFunction(
 // Watchdog: mark long-running discovery jobs as failed and send to DLQ
 export const watchdogStuckDiscoveryJobs = inngest.createFunction(
   { id: 'watchdog-stuck-discovery', name: 'Watchdog · Discovery timeouts', retries: 0 },
-  { cron: '*/2 * * * *' },
+  { cron: '*/1 * * * *' },
   async ({ step, logger }) => {
     const supabase = getServiceSupabase();
-    const thresholdMinutes = 10;
+    const thresholdMinutes = 3;
     const result = await step.run('find-stuck', async () => {
       const { data, error } = await supabase
         .from('job_status')
