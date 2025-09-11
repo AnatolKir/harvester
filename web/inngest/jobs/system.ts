@@ -195,12 +195,14 @@ export const jobStatusJob = inngest.createFunction(
   { event: 'tiktok/job.status.update' },
   async ({ event, step }) => {
     const supabase = getServiceSupabase();
-    const { jobId, status, metadata } = event.data as any;
+    const { jobId, status, metadata, jobType, startedAt, completedAt, executionTimeMs } = event.data as any;
     await step.run('update-job-status', async () => {
-      await supabase.from('job_status').upsert(
-        { job_id: jobId, status, metadata, updated_at: new Date().toISOString() },
-        { onConflict: 'job_id' }
-      );
+      const payload: any = { job_id: jobId, status, metadata, updated_at: new Date().toISOString() };
+      if (jobType) payload.job_type = jobType;
+      if (startedAt) payload.started_at = new Date(startedAt).toISOString();
+      if (completedAt) payload.completed_at = new Date(completedAt).toISOString();
+      if (typeof executionTimeMs === 'number') payload.execution_time_ms = Math.max(0, Math.floor(executionTimeMs));
+      await supabase.from('job_status').upsert(payload, { onConflict: 'job_id' });
     });
     return { success: true, data: { jobId, status, updated: true } } as JobResult;
   }

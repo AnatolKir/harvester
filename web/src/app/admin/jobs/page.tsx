@@ -338,6 +338,16 @@ export default async function AdminJobsPage({
           </CardContent>
         </Card>
 
+        <Card>
+          <CardHeader>
+            <CardTitle>What is DLQ?</CardTitle>
+          </CardHeader>
+          <CardContent className="text-muted-foreground text-sm">
+            DLQ stands for Dead Letter Queue. When a job fails too many times,
+            its event is recorded in the DLQ for manual inspection or retry. A
+            non‑zero size indicates items that need attention.
+          </CardContent>
+        </Card>
         {/* Manual discovery trigger */}
         <Card>
           <CardHeader>

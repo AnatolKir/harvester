@@ -66,12 +66,15 @@ export const videoDiscoveryJob = inngest.createFunction(
       }
 
       // Step 2: Update job status + log start
+      const jobStart = Date.now();
       await step.run('update-job-status', async () => {
         await inngest.send({
           name: 'tiktok/job.status.update',
           data: {
             jobId,
             status: 'running',
+            jobType: 'discovery',
+            startedAt: jobStart,
             metadata: { videoId, attempt, correlationId },
           },
         });
@@ -223,11 +226,15 @@ export const videoDiscoveryJob = inngest.createFunction(
 
       // Step 6: Update final job status + log completion
       await step.run('complete-job-status', async () => {
+        const completedAt = Date.now();
         await inngest.send({
           name: 'tiktok/job.status.update',
           data: {
             jobId,
             status: 'completed',
+            jobType: 'discovery',
+            completedAt,
+            executionTimeMs: completedAt - jobStart,
             metadata: {
               videosFound: discoveryResult.videosFound,
               newVideos: discoveryResult.newVideos,
@@ -293,6 +300,7 @@ export const videoDiscoveryJob = inngest.createFunction(
           data: {
             jobId: `discovery-${Date.now()}`,
             status: 'failed',
+            jobType: 'discovery',
             metadata: {
               error: error instanceof Error ? error.message : String(error),
               attempt,
