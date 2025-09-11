@@ -5,7 +5,7 @@
 # Use Docker for building the application
 builder = "dockerfile"
 dockerfile = "Dockerfile"
-target = "production"
+dockerfileTarget = "production"
 
 # Build configuration
 watchPatterns = ["src/**", "package*.json", "tsconfig.json"]
