@@ -132,7 +132,7 @@ async function executeBrightDataHttp(params: Record<string, unknown>): Promise<a
     // Use Bright Data request API to fetch a TikTok promoted feed via Google site search as fallback
     // This is a pragmatic approach while keeping the interface stable
     const query = encodeURIComponent(
-      `${String(params.query || '')} site:tiktok.com \/video\/ (#ad OR sponsored)`
+      `${String((params as any).query ?? '')} site:tiktok.com \/video\/ (#ad OR sponsored)`
     );
     const googleUrl = `https://www.google.com/search?q=${query}`;
 
@@ -201,12 +201,16 @@ function transformSearchResults(
       }
       
       // Transform to our format
+      const url: string = String(result.url ?? result.link ?? '');
+      const title: string = String(result.title ?? result.description ?? 'Untitled');
+      const author: string = String(result.author ?? result.creator ?? result.username ?? 'Unknown');
+      const viewsRaw: string = String(result.views ?? result.view_count ?? '0');
       const video: VideoResult = {
-        id: extractVideoId(result.url || result.link || ''),
-        url: result.url || result.link || '',
-        title: result.title || result.description || 'Untitled',
-        author: result.author || result.creator || result.username || 'Unknown',
-        view_count: parseInt(result.views || result.view_count || '0'),
+        id: extractVideoId(url),
+        url,
+        title,
+        author,
+        view_count: parseInt(viewsRaw),
         is_promoted: isPromotedContent(result),
         discovered_at: new Date().toISOString(),
       };
