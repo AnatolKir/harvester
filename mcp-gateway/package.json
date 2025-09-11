@@ -24,6 +24,7 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "@brightdata/mcp": "^2.5.0",
     "@modelcontextprotocol/sdk": "^0.6.1",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
