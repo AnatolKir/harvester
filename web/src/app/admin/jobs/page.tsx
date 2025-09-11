@@ -3,8 +3,7 @@ import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { revalidatePath } from "next/cache";
+import TriggerDiscoveryClient from "./TriggerDiscovery";
 import type { AdminJobsData, JobMetric } from "@/types/admin";
 
 type RateLimitMetrics = {
@@ -139,31 +138,7 @@ export default async function AdminJobsPage({
     ? Math.max(...avgDurations.map((d) => d.avgMs))
     : 0;
 
-  async function triggerDiscovery(formData: FormData) {
-    "use server";
-    const base = (
-      process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3032"
-    ).replace(/\/$/, "");
-    const cookieStore = await cookies();
-    const cookieHeader = cookieStore
-      .getAll()
-      .map((c) => `${c.name}=${c.value}`)
-      .join("; ");
-    const limit = Math.max(
-      1,
-      Math.min(100, Number(formData.get("limit") || 50))
-    );
-    await fetch(`${base}/api/admin/jobs`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Cookie: cookieHeader,
-        Origin: base,
-      },
-      body: JSON.stringify({ action: "trigger_discovery", limit }),
-    });
-    revalidatePath("/admin/jobs");
-  }
+  // manual trigger handled by client component
 
   return (
     <div className="space-y-8">
@@ -369,21 +344,7 @@ export default async function AdminJobsPage({
             <CardTitle>Trigger discovery</CardTitle>
           </CardHeader>
           <CardContent>
-            <form action={triggerDiscovery} className="flex items-end gap-2">
-              <div>
-                <div className="text-muted-foreground mb-1 text-sm">
-                  Limit (1–100)
-                </div>
-                <Input
-                  name="limit"
-                  type="number"
-                  min={1}
-                  max={100}
-                  defaultValue={50}
-                />
-              </div>
-              <Button type="submit">Start Discovery</Button>
-            </form>
+            <TriggerDiscoveryClient />
           </CardContent>
         </Card>
       </div>
