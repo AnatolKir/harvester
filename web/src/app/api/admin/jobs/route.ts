@@ -92,21 +92,23 @@ export const POST = withAdminGuard(async (request: NextRequest) => {
         const nowIso = new Date().toISOString();
         const { data: u1, error: e1 } = await supabase
           .from("job_status")
+
           .update({
             status: "failed",
             completed_at: nowIso,
             error_message: `cleared by admin (> ${minutes}m)`,
-          })
+          } as Record<string, unknown>)
           .eq("status", "running")
           .lte("started_at", cutoff)
           .select("job_id");
         const { data: u2, error: e2 } = await supabase
           .from("job_status")
+
           .update({
             status: "failed",
             completed_at: nowIso,
             error_message: `cleared by admin (> ${minutes}m, no started_at)`,
-          })
+          } as Record<string, unknown>)
           .eq("status", "running")
           .is("started_at", null)
           .lte("created_at", cutoff)
