@@ -120,7 +120,7 @@ export const videoDiscoveryJob = inngest.createFunction(
                 'skincare',
               ],
               limit,
-              contentType: 'all',
+              contentType: 'promoted',
             });
             items = res;
             await breaker.onSuccess();
