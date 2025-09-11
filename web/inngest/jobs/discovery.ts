@@ -190,7 +190,24 @@ export const videoDiscoveryJob = inngest.createFunction(
         };
       })) as unknown as { videosFound: number; newVideos: number; videoIds: string[] };
 
-      // Step 4: Trigger harvesting for new videos
+      // Step 4: Trigger links enrichment for new videos
+      if (discoveryResult.newVideos > 0) {
+        await step.run('trigger-links-enrichment', async () => {
+          const enrichPromises = discoveryResult.videoIds.map((videoId: string) =>
+            inngest.send({
+              name: 'tiktok/video.enrich.links',
+              data: { videoId, includeProfile: true },
+            })
+          );
+          await Promise.all(enrichPromises);
+          logger.info('Triggered links enrichment jobs', {
+            count: enrichPromises.length,
+            correlationId,
+          });
+        });
+      }
+
+      // Step 5: Trigger harvesting for new videos (unchanged)
       if (discoveryResult.newVideos > 0) {
         await step.run('trigger-harvesting', async () => {
           const harvestingPromises = discoveryResult.videoIds.map((videoId: string) =>
@@ -204,7 +221,7 @@ export const videoDiscoveryJob = inngest.createFunction(
             })
           );
 
-        	await Promise.all(harvestingPromises);
+          await Promise.all(harvestingPromises);
 
           logger.info('Triggered harvesting jobs', {
             count: harvestingPromises.length,
@@ -213,7 +230,7 @@ export const videoDiscoveryJob = inngest.createFunction(
         });
       }
 
-      // Step 5: Update final job status + log completion
+      // Step 6: Update final job status + log completion
       await step.run('complete-job-status', async () => {
         await inngest.send({
           name: 'tiktok/job.status.update',
