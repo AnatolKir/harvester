@@ -53,6 +53,7 @@ export const tiktokEnrichLinksTool: Tool = {
 
       for (const page of pages) {
         const html = await brightDataFetchRaw(page.url, apiToken, zone);
+        logger.info('tiktok.enrich.links fetched html', { source: page.source, length: html.length });
         const promoted = detectPromoted(html);
         const rawLinks = extractHttpLinks(html);
         for (const raw of rawLinks) {
@@ -71,6 +72,25 @@ export const tiktokEnrichLinksTool: Tool = {
             is_promoted: promoted,
           });
           out.push(normalized);
+        }
+        // Also scan plain text and JSON for URL candidates beyond anchor tags
+        const textUrls = extractTextUrls(html);
+        for (const raw of textUrls) {
+          const key = `${page.source}:${raw}`;
+          if (seen.has(key)) continue;
+          seen.add(key);
+          const { finalUrl } = await followRedirects(raw);
+          const normalized: EnrichLinksItem = OutputItemSchema.parse({
+            video_id: extractVideoId(input.video_url),
+            raw_url: raw,
+            final_url: finalUrl ?? null,
+            raw_host: safeHost(raw),
+            final_host: finalUrl ? safeHost(finalUrl) : null,
+            source: page.source,
+            is_promoted: promoted,
+          });
+          out.push(normalized);
+          if (out.length > 300) break; // safety cap
         }
       }
 
@@ -135,6 +155,20 @@ function extractHttpLinks(html: string): string[] {
     while ((m = hrefRe.exec(html)) !== null && m[1]) {
       const url: string = String(m[1]);
       if (isLikelyOutbound(url)) out.push(url);
+      if (out.length > 200) break; // safety
+    }
+  } catch {}
+  return Array.from(new Set(out));
+}
+
+function extractTextUrls(html: string): string[] {
+  const out: string[] = [];
+  try {
+    const urlRe = /(https?:\/\/[^\s"'<>]+?)(?=[\s"'<>]|$)/gi;
+    let m: RegExpExecArray | null;
+    while ((m = urlRe.exec(html)) !== null && m[1]) {
+      const candidate = String(m[1]);
+      if (isLikelyOutbound(candidate)) out.push(candidate);
       if (out.length > 200) break; // safety
     }
   } catch {}
