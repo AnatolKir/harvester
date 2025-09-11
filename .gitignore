@@ -127,6 +127,9 @@ downloads/
 eggs/
 .eggs/
 lib/
+# Allow Next.js app libs under web/src
+!web/src/lib/
+!web/src/lib/**
 lib64/
 parts/
 sdist/
