@@ -226,4 +226,64 @@ export const maintenanceCleanupJob = inngest.createFunction(
   }
 );
 
+// Watchdog: mark long-running discovery jobs as failed and send to DLQ
+export const watchdogStuckDiscoveryJobs = inngest.createFunction(
+  { id: 'watchdog-stuck-discovery', name: 'Watchdog · Discovery timeouts', retries: 0 },
+  { cron: '*/2 * * * *' },
+  async ({ step, logger }) => {
+    const supabase = getServiceSupabase();
+    const thresholdMinutes = 10;
+    const result = await step.run('find-stuck', async () => {
+      const { data, error } = await supabase
+        .from('job_status')
+        .select('job_id, started_at')
+        .eq('job_type', 'discovery')
+        .eq('status', 'running');
+      if (error) throw error;
+      const now = Date.now();
+      const stuck = (data || []).filter((r: any) => {
+        const started = r.started_at ? new Date(r.started_at).getTime() : now;
+        return now - started > thresholdMinutes * 60 * 1000;
+      });
+      return stuck as Array<{ job_id: string; started_at: string | null }>;
+    });
+
+    if (result.length === 0) return { success: true };
+
+    await step.run('mark-failed', async () => {
+      for (const row of result) {
+        try {
+          await supabase
+            .from('job_status')
+            .update({ status: 'failed', completed_at: new Date().toISOString(), error_message: 'watchdog timeout >10m' })
+            .eq('job_id', row.job_id);
+
+          await supabase.from('system_logs').insert({
+            event_type: 'job_error',
+            level: 'error',
+            message: 'Watchdog marked discovery job failed (timeout)',
+            job_id: row.job_id,
+            metadata: { thresholdMinutes },
+          });
+
+          // Put into DLQ for optional manual retry
+          await inngest.send({
+            name: 'tiktok/system.retry',
+            data: {
+              originalEventName: 'tiktok/video.discovery.scheduled',
+              originalPayload: { reason: 'watchdog_timeout' },
+              attempt: 0,
+              lastError: 'watchdog timeout >10m',
+            },
+          });
+        } catch (e) {
+          logger.error('watchdog_failed_to_mark', { jobId: row.job_id, error: (e as Error).message });
+        }
+      }
+    });
+
+    return { success: true };
+  }
+);
+
 

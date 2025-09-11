@@ -101,6 +101,12 @@ export const videoDiscoveryJob = inngest.createFunction(
         const maxRetries = 5;
         let attemptNum = 0;
         let items: Array<{ video_id: string; url: string }> = [];
+        const callWithTimeout = async <T>(p: Promise<T>, ms: number): Promise<T> => {
+          return await Promise.race([
+            p,
+            new Promise<T>((_, rej) => setTimeout(() => rej(new Error('timeout')), ms)) as Promise<T>,
+          ]);
+        };
         // eslint-disable-next-line no-constant-condition
         while (true) {
           try {
@@ -110,12 +116,15 @@ export const videoDiscoveryJob = inngest.createFunction(
               logger.warn('circuit_open_fast_fail', { correlationId });
               throw new Error('MCP circuit open');
             }
-            const res = await fetchPromotedVideoIds(mcp, {
-              region: 'US',
-              keywords: [],
-              limit,
-              contentType: 'all',
-            });
+            const res = await callWithTimeout(
+              fetchPromotedVideoIds(mcp, {
+                region: 'US',
+                keywords: [],
+                limit,
+                contentType: 'all',
+              }),
+              5 * 60 * 1000
+            );
             items = res;
             await breaker.onSuccess();
             break;
