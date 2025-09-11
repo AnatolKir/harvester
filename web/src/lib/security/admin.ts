@@ -22,6 +22,8 @@ export function withAdminGuard(handler: AdminGuardHandler) {
   );
   return withSecurity(handler, {
     ...AuthenticatedApiSecurity,
+    // Avoid double-reading JSON body; handlers parse body themselves
+    validatePayload: false,
     requireAuth: hasAuthEnv,
     requireAdmin: hasAuthEnv,
     allowedOrigins: getAllowedAdminOrigins(),
