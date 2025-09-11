@@ -82,6 +82,42 @@ export const POST = withAdminGuard(async (request: NextRequest) => {
     let result;
 
     switch (action) {
+      case "clear_stuck": {
+        const minutes = Math.max(
+          1,
+          parseInt(String(params.minutes || "3"), 10)
+        );
+        const cutoff = new Date(Date.now() - minutes * 60 * 1000).toISOString();
+        const supabase = await createClient();
+        const nowIso = new Date().toISOString();
+        const { data: u1, error: e1 } = await supabase
+          .from("job_status")
+          .update({
+            status: "failed",
+            completed_at: nowIso,
+            error_message: `cleared by admin (> ${minutes}m)`,
+          })
+          .eq("status", "running")
+          .lte("started_at", cutoff)
+          .select("job_id");
+        const { data: u2, error: e2 } = await supabase
+          .from("job_status")
+          .update({
+            status: "failed",
+            completed_at: nowIso,
+            error_message: `cleared by admin (> ${minutes}m, no started_at)`,
+          })
+          .eq("status", "running")
+          .is("started_at", null)
+          .lte("created_at", cutoff)
+          .select("job_id");
+        if (e1 || e2)
+          throw new Error(
+            e1?.message || e2?.message || "Failed to clear stuck jobs"
+          );
+        result = { cleared: (u1?.length || 0) + (u2?.length || 0) };
+        break;
+      }
       case "trigger_discovery":
         result = await InngestAdmin.triggerDiscovery(params);
         break;
