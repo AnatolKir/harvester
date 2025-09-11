@@ -112,9 +112,18 @@ export const discoveryBackfillJob = inngest.createFunction(
         const { found, inserted } = await step.run(`fetch-window-${i}`, async () => {
           const items = await fetchPromotedVideoIds(mcp, {
             region: 'US',
-            windowHours: 24,
-            pageSize: limit,
-            offsetHours,
+            keywords: [
+              'ad',
+              'sponsored',
+              'review',
+              'promo',
+              'coupon',
+              'shop',
+              'amazon',
+              'skincare',
+            ],
+            limit,
+            contentType: 'all',
           });
 
           const seen = new Set<string>();
