@@ -129,8 +129,9 @@ async function initializeBrightDataClient(): Promise<any> {
  */
 async function executeBrightDataCommand(params: any): Promise<any> {
   try {
-    // Build command for BrightData MCP (use locally installed CLI to avoid runtime fetch)
-    const command = `node ./node_modules/@brightdata/mcp/dist/cli.js call ${JSON.stringify(
+    // Build command for BrightData MCP (call the installed bin entry)
+    // Package exposes bin pointing to server.js, not a dist/cli file
+    const command = `node ./node_modules/@brightdata/mcp/server.js call ${JSON.stringify(
       params
     )}`;
     
