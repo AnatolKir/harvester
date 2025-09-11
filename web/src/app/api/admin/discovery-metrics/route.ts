@@ -1,4 +1,4 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { withAdminGuard } from "@/lib/security/admin";
 
@@ -13,14 +13,11 @@ export const GET = withAdminGuard(async (_request: NextRequest) => {
       .single(),
   ]);
 
-  return new Response(
-    JSON.stringify({
-      success: true,
-      data: {
-        videos_last_hour: lastHour?.videos_last_hour ?? 0,
-        active_enrichment: active?.active_enrichment ?? 0,
-      },
-    }),
-    { headers: { "Content-Type": "application/json" } }
-  );
+  return NextResponse.json({
+    success: true,
+    data: {
+      videos_last_hour: lastHour?.videos_last_hour ?? 0,
+      active_enrichment: active?.active_enrichment ?? 0,
+    },
+  });
 });
