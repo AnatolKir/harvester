@@ -11,7 +11,7 @@ export const linksEnrichmentJob = inngest.createFunction(
     id: 'links-enrichment',
     name: 'Video Outbound Links Enrichment',
     retries: 2,
-    concurrency: { limit: 5 },
+    concurrency: { limit: 2 },
   },
   { event: 'tiktok/video.enrich.links' },
   async ({ event, step, logger, attempt }) => {
@@ -50,10 +50,19 @@ export const linksEnrichmentJob = inngest.createFunction(
         apiKey: process.env.BRIGHTDATA_MCP_API_KEY!,
         stickyMinutes: parseInt(process.env.MCP_STICKY_SESSION_MINUTES || '10'),
       });
-      const resp = (await mcp.call('tiktok.enrich.links', {
-        video_url: videoUrl,
-        include_profile: includeProfile,
-      })) as { result?: Array<{ raw_url: string; final_url?: string | null; raw_host?: string | null; final_host?: string | null; source: 'video' | 'profile'; is_promoted?: boolean }> };
+      const withTimeout = async <T>(p: Promise<T>, ms: number): Promise<T> => {
+        return (await Promise.race([
+          p,
+          new Promise<T>((_, rej) => setTimeout(() => rej(new Error('timeout')), ms)) as Promise<T>,
+        ])) as T;
+      };
+      const resp = (await withTimeout(
+        mcp.call('tiktok.enrich.links', {
+          video_url: videoUrl,
+          include_profile: includeProfile,
+        }) as Promise<any>,
+        90_000
+      )) as { result?: Array<{ raw_url: string; final_url?: string | null; raw_host?: string | null; final_host?: string | null; source: 'video' | 'profile'; is_promoted?: boolean }> };
 
       const items: Array<{ raw_url: string; final_url?: string | null; raw_host?: string | null; final_host?: string | null; source: 'video' | 'profile'; is_promoted?: boolean }>
         = Array.isArray((resp as any).result) ? (resp as any).result : [];
@@ -62,7 +71,7 @@ export const linksEnrichmentJob = inngest.createFunction(
       return { items, promoted };
     });
 
-    const links = extraction.items;
+    const links = extraction.items.slice(0, 50);
     const isPromoted = extraction.promoted;
 
     // Persist with duplicate suppression on (video_id, raw_url)

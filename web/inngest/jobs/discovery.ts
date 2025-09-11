@@ -23,7 +23,7 @@ export const videoDiscoveryJob = inngest.createFunction(
     name: 'TikTok Video Discovery',
     retries: 3,
     concurrency: {
-      limit: 5,
+      limit: 2,
     },
   },
   [
