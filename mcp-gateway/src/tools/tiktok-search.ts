@@ -136,12 +136,22 @@ async function executeBrightDataHttp(params: Record<string, unknown>): Promise<a
     );
     const googleUrl = `https://www.google.com/search?q=${query}`;
 
+    const sessionId = `sess_${Math.floor(Date.now() / (10 * 60 * 1000))}`;
     const resp = await axios.post(
       'https://api.brightdata.com/request',
       {
         url: googleUrl,
         zone: process.env.WEB_UNLOCKER_ZONE ?? 'mcp_unlocker',
         format: 'raw',
+        country: String((params as any).country || 'us').toLowerCase(),
+        session: sessionId,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+          'Accept-Language': 'en-US,en;q=0.9',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+          'Upgrade-Insecure-Requests': '1',
+          'Connection': 'keep-alive',
+        },
       },
       {
         headers: {
@@ -149,7 +159,7 @@ async function executeBrightDataHttp(params: Record<string, unknown>): Promise<a
           'Content-Type': 'application/json',
         },
         responseType: 'text',
-        timeout: 20000,
+        timeout: 25000,
       }
     );
 

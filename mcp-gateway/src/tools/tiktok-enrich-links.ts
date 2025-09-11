@@ -123,12 +123,22 @@ function deriveProfileUrl(videoUrl: string): string | null {
 }
 
 async function brightDataFetchRaw(url: string, apiToken: string, zone: string): Promise<string> {
+  const sessionId = `sess_${Math.floor(Date.now() / (10 * 60 * 1000))}`;
   const resp = await axios.post(
     'https://api.brightdata.com/request',
     {
       url,
       zone,
       format: 'raw',
+      country: 'us',
+      session: sessionId,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+        'Upgrade-Insecure-Requests': '1',
+        'Connection': 'keep-alive',
+      },
     },
     {
       headers: {
@@ -136,7 +146,7 @@ async function brightDataFetchRaw(url: string, apiToken: string, zone: string): 
         'Content-Type': 'application/json',
       },
       responseType: 'text',
-      timeout: 20000,
+      timeout: 25000,
       validateStatus: () => true,
     }
   );
