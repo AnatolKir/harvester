@@ -1,5 +1,19 @@
 # TikTok Domain Harvester
 
+### MCP Gateway
+- Current URL: set `MCP_BASE_URL` in Vercel to your Railway host, e.g.
+  - `https://mcp-gateway-production-66e2.up.railway.app`
+- Smoke tests:
+```bash
+curl -sS $MCP_BASE_URL/health
+curl -sS $MCP_BASE_URL/mcp/tools
+curl -sS -X POST $MCP_BASE_URL/mcp \
+  -H 'Content-Type: application/json' \
+  -d '{"tool":"tiktok.ccl.search","params":{"keywords":"ad","limit":5,"country":"US","content_type":"all"}}'
+```
+
+See `prompts/sprint9/` for the Sprint 9 plan to maximize harvested domains.
+
 ## Overview
 
 A comment-first crawler for TikTok **U.S. promoted videos**.  

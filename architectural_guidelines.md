@@ -1,5 +1,13 @@
 ## MCP-based Discovery/Harvest (Sprint 2)
 
+## Domain Harvesting v2 (Sprint 9)
+- Discovery broadens search (TikTok) to maximize recall; promotion status is validated later.
+- Gateway enrichment fetches video and profile pages via Bright Data and extracts all links.
+- Store as‑seen variants: `raw_url`, `final_url`, `raw_host`, `final_host`. No normalization/merging.
+- Dedupe key: `(video_id, raw_url)` only. Keep typo‑like hosts intentionally.
+- Rate limiting via existing envs: `DISCOVERY_RPM`, `HTTP_ENRICH_RPM` (defaults 30/60/30). Use jitter and backoff on 429.
+- Provide a daily trending query over `outbound_links` for ops.
+
 - Primary data acquisition runs inside Inngest jobs (Node) using a lightweight MCP client.
 - Bright Data MCP is the initial provider; the fetch interface is pluggable for future sources.
 - The former Playwright worker path is considered legacy and retained only for rollback (see `worker/README_LEGACY.md`).

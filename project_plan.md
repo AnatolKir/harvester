@@ -1,5 +1,22 @@
 ### Sprint 2: MCP Pivot and Schema Reconcile
 
+### Sprint 9 — High‑Yield Domain Harvesting
+Goals
+- Increase candidate domains by broadening TikTok discovery and adding a lightweight enrichment step that extracts/unwraps links.
+
+Deliverables
+- Discovery uses `content_type="all"` with `limit=50` across multiple keywords.
+- New MCP tool `tiktok.enrich.links` returns `raw_url`, `final_url`, `raw_host`, `final_host`.
+- Inngest pipeline wires discovery → enrichment → storage (`outbound_links` with unique `(video_id, raw_url)`).
+- Basic metrics and a daily trending query.
+
+Dependencies
+- Railway MCP Gateway healthy with `BRIGHTDATA_API_KEY` and `WEB_UNLOCKER_ZONE`.
+- Vercel `MCP_BASE_URL` updated to current Railway URL.
+
+Links
+- See `prompts/sprint9/README.md` and related sprint docs.
+
 - Replace Playwright proxy workflow with MCP calls executed in Inngest jobs (Node).
 - Reconcile database schema, types, and API to canonical names: `video.video_id`, `domain.domain`, and `domain_mention(domain, video_id, comment_id, created_at)`.
 - Implement MCP client (`web/src/lib/mcp/*`), and update Inngest jobs (`inngest/jobs/*`).
