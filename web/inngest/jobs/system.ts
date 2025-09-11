@@ -236,16 +236,19 @@ export const watchdogStuckDiscoveryJobs = inngest.createFunction(
     const result = await step.run('find-stuck', async () => {
       const { data, error } = await supabase
         .from('job_status')
-        .select('job_id, started_at')
-        .eq('job_type', 'discovery')
+        .select('job_id, started_at, created_at, job_type, status')
         .eq('status', 'running');
       if (error) throw error;
       const now = Date.now();
       const stuck = (data || []).filter((r: any) => {
-        const started = r.started_at ? new Date(r.started_at).getTime() : now;
+        const started = r.started_at
+          ? new Date(r.started_at).getTime()
+          : r.created_at
+          ? new Date(r.created_at).getTime()
+          : now;
         return now - started > thresholdMinutes * 60 * 1000;
       });
-      return stuck as Array<{ job_id: string; started_at: string | null }>;
+      return stuck as Array<{ job_id: string; started_at: string | null; created_at?: string | null }>;
     });
 
     if (result.length === 0) return { success: true };
