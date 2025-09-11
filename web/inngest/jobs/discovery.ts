@@ -190,22 +190,22 @@ export const videoDiscoveryJob = inngest.createFunction(
         };
       })) as unknown as { videosFound: number; newVideos: number; videoIds: string[] };
 
-      // Step 4: Trigger links enrichment for new videos
-      if (discoveryResult.newVideos > 0) {
-        await step.run('trigger-links-enrichment', async () => {
-          const enrichPromises = discoveryResult.videoIds.map((videoId: string) =>
-            inngest.send({
-              name: 'tiktok/video.enrich.links',
-              data: { videoId, includeProfile: true },
-            })
-          );
-          await Promise.all(enrichPromises);
-          logger.info('Triggered links enrichment jobs', {
-            count: enrichPromises.length,
-            correlationId,
-          });
+      // Step 4: Trigger links enrichment for discovered videos (even if already known)
+      await step.run('trigger-links-enrichment', async () => {
+        const uniqueIds = Array.from(new Set(discoveryResult.videoIds || []));
+        if (uniqueIds.length === 0) return;
+        const enrichPromises = uniqueIds.map((videoId: string) =>
+          inngest.send({
+            name: 'tiktok/video.enrich.links',
+            data: { videoId, includeProfile: true },
+          })
+        );
+        await Promise.all(enrichPromises);
+        logger.info('Triggered links enrichment jobs', {
+          count: enrichPromises.length,
+          correlationId,
         });
-      }
+      });
 
       // Step 5: Trigger harvesting for new videos (unchanged)
       if (discoveryResult.newVideos > 0) {

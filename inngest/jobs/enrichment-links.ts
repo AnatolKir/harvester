@@ -75,6 +75,18 @@ export const linksEnrichmentJob = inngest.createFunction(
 
     logger.info('Links enrichment completed', { videoId, extracted: links.length, inserted });
 
+    // Write to system_logs for admin visibility
+    await step.run('log-completion', async () => {
+      try {
+        await supabase.from('system_logs').insert({
+          event_type: 'job_progress',
+          level: 'info',
+          message: 'Links enrichment completed',
+          metadata: { videoId, extracted: links.length, inserted },
+        });
+      } catch {}
+    });
+
     return {
       success: true,
       data: { extracted: links.length, inserted },
