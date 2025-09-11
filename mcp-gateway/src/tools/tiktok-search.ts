@@ -1,8 +1,7 @@
 import { Tool } from '../types';
 import { logger } from '../utils/logger';
 import { z } from 'zod';
-import { exec } from 'child_process';
-import { promisify } from 'util';
+import axios from 'axios';
 
 // Input schema for the TikTok search tool
 const TikTokSearchParamsSchema = z.object({
@@ -47,14 +46,9 @@ export const tiktokSearchTool: Tool = {
         params: validatedParams,
       });
       
-      // Initialize BrightData MCP client
-      const client = await initializeBrightDataClient();
-      
-      // Map our parameters to BrightData's search format
+      // Map our parameters to Bright Data format and call HTTP API directly
       const brightDataParams = mapToBrightDataParams(validatedParams);
-      
-      // Execute search using BrightData
-      const searchResults = await executeBrightDataSearch(client, brightDataParams);
+      const searchResults = await executeBrightDataHttp(brightDataParams);
       
       // Filter and transform results
       const videos = transformSearchResults(searchResults, validatedParams);
@@ -105,58 +99,6 @@ export const tiktokSearchTool: Tool = {
 };
 
 /**
- * Execute command helper
- */
-const execAsync = promisify(exec);
-
-/**
- * Initialize BrightData connection (simplified for MVP)
- */
-async function initializeBrightDataClient(): Promise<any> {
-  // For MVP, we'll use direct API calls or command execution
-  // This is a placeholder that returns a mock client
-  return {
-    request: async (params: any) => {
-      // This would be replaced with actual BrightData API calls
-      logger.info('BrightData request', params);
-      return executeBrightDataCommand(params);
-    }
-  };
-}
-
-/**
- * Execute BrightData command via CLI
- */
-async function executeBrightDataCommand(params: any): Promise<any> {
-  try {
-    // Build command for BrightData MCP (call the installed bin entry)
-    // Package exposes bin pointing to server.js, not a dist/cli file
-    const command = `node ./node_modules/@brightdata/mcp/server.js call ${JSON.stringify(
-      params
-    )}`;
-    
-    const { stdout, stderr } = await execAsync(command, {
-      env: {
-        ...process.env,
-        // Bright Data MCP expects API_TOKEN; map from BRIGHTDATA_API_KEY if needed
-        API_TOKEN:
-          process.env.API_TOKEN || process.env.BRIGHTDATA_API_KEY || '',
-        BRIGHTDATA_API_KEY: process.env.BRIGHTDATA_API_KEY || '',
-      },
-    });
-    
-    if (stderr) {
-      logger.warn('BrightData command stderr:', stderr);
-    }
-    
-    return JSON.parse(stdout);
-  } catch (error) {
-    logger.error('Failed to execute BrightData command', error);
-    throw new Error('BrightData service error');
-  }
-}
-
-/**
  * Map our search parameters to BrightData's expected format
  */
 function mapToBrightDataParams(params: TikTokSearchParams): Record<string, unknown> {
@@ -179,27 +121,54 @@ function mapToBrightDataParams(params: TikTokSearchParams): Record<string, unkno
 }
 
 /**
- * Execute search using BrightData's search_engine tool
+ * Execute search using Bright Data HTTP API
  */
-async function executeBrightDataSearch(
-  client: any,
-  params: Record<string, unknown>
-): Promise<any[]> {
+async function executeBrightDataHttp(params: Record<string, unknown>): Promise<any[]> {
   try {
-    const result = await client.request({
-      method: 'tools/call',
-      params: {
-        name: 'search_engine',
-        arguments: params,
+    const apiToken = process.env.API_TOKEN || process.env.BRIGHTDATA_API_KEY;
+    if (!apiToken) throw new Error('Missing Bright Data API token');
+
+    // Use Bright Data request API to fetch a TikTok promoted feed via Google site search as fallback
+    // This is a pragmatic approach while keeping the interface stable
+    const query = encodeURIComponent(
+      `${String(params.query || '')} site:tiktok.com \/video\/ (#ad OR sponsored)`
+    );
+    const googleUrl = `https://www.google.com/search?q=${query}`;
+
+    const resp = await axios.post(
+      'https://api.brightdata.com/request',
+      {
+        url: googleUrl,
+        zone: process.env.WEB_UNLOCKER_ZONE || 'mcp_unlocker',
+        format: 'raw',
       },
-    });
-    
-    // Extract results from response
-    if (result.content && Array.isArray(result.content)) {
-      return result.content;
+      {
+        headers: {
+          Authorization: `Bearer ${apiToken}`,
+          'Content-Type': 'application/json',
+        },
+        responseType: 'text',
+        timeout: 20000,
+      }
+    );
+
+    const html = String(resp.data || '');
+    // Very simple extraction of TikTok video URLs from SERP HTML
+    const urlRegex = /https?:\/\/(?:www\.)?tiktok\.com\/@[A-Za-z0-9_.-]+\/video\/(\d+)/g;
+    const seen = new Set<string>();
+    const out: Array<{ url: string; video_id: string; title?: string }> = [];
+    let m: RegExpExecArray | null;
+    while ((m = urlRegex.exec(html)) !== null) {
+      const videoId = m[1];
+      const url = m[0];
+      if (!seen.has(videoId)) {
+        seen.add(videoId);
+        out.push({ url, video_id: videoId });
+      }
+      if (out.length >= (params.limit as number | undefined) || 0) break;
     }
-    
-    return [];
+
+    return out;
   } catch (error: any) {
     // Check for rate limiting
     if (error.code === 429 || error.message?.includes('rate limit')) {
@@ -207,7 +176,8 @@ async function executeBrightDataSearch(
       throw new RateLimitError(retryAfter);
     }
     
-    throw error;
+    logger.error('Bright Data HTTP error', error?.response?.data || error?.message);
+    throw new Error('BrightData service error');
   }
 }
 
