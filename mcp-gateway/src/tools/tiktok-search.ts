@@ -138,6 +138,9 @@ async function executeBrightDataCommand(params: any): Promise<any> {
     const { stdout, stderr } = await execAsync(command, {
       env: {
         ...process.env,
+        // Bright Data MCP expects API_TOKEN; map from BRIGHTDATA_API_KEY if needed
+        API_TOKEN:
+          process.env.API_TOKEN || process.env.BRIGHTDATA_API_KEY || '',
         BRIGHTDATA_API_KEY: process.env.BRIGHTDATA_API_KEY || '',
       },
     });
