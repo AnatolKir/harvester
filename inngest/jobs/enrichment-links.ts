@@ -18,6 +18,16 @@ export const linksEnrichmentJob = inngest.createFunction(
     const { videoId, includeProfile = false } = event.data as { videoId: string; includeProfile?: boolean };
 
     logger.info('Starting links enrichment', { videoId, includeProfile, attempt });
+    const jobId = `enrich-${videoId}-${Date.now()}`;
+    const jobStart = Date.now();
+    await step.run('status-start', async () => {
+      try {
+        await inngest.send({
+          name: 'tiktok/job.status.update',
+          data: { jobId, status: 'running', jobType: 'enrichment_links', startedAt: jobStart },
+        });
+      } catch {}
+    });
 
     // Fetch video URL from DB
     const videoUrl = await step.run('lookup-video-url', async () => {
@@ -86,6 +96,22 @@ export const linksEnrichmentJob = inngest.createFunction(
     });
 
     logger.info('Links enrichment completed', { videoId, extracted: links.length, inserted, isPromoted });
+    await step.run('status-complete', async () => {
+      try {
+        const completedAt = Date.now();
+        await inngest.send({
+          name: 'tiktok/job.status.update',
+          data: {
+            jobId,
+            status: 'completed',
+            jobType: 'enrichment_links',
+            completedAt,
+            executionTimeMs: completedAt - jobStart,
+            metadata: { videoId, extracted: links.length, inserted, isPromoted },
+          },
+        });
+      } catch {}
+    });
 
     // Write to system_logs for admin visibility
     await step.run('log-completion', async () => {

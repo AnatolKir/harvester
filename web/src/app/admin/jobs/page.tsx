@@ -57,6 +57,21 @@ async function getRateLimitMetrics(
   return json.data as RateLimitMetrics;
 }
 
+async function getDiscoveryMetrics(
+  cookieHeader?: string
+): Promise<{ videos_last_hour: number; active_enrichment: number } | null> {
+  const base = (
+    process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3032"
+  ).replace(/\/$/, "");
+  const res = await fetch(`${base}/api/admin/discovery-metrics`, {
+    cache: "no-store",
+    headers: cookieHeader ? { cookie: cookieHeader } : undefined,
+  });
+  if (!res.ok) return null;
+  const json = await res.json();
+  return json?.data ?? null;
+}
+
 function formatPercent(value: number) {
   if (Number.isNaN(value)) return "0%";
   return `${value.toFixed(2)}%`;
@@ -105,6 +120,7 @@ export default async function AdminJobsPage({
     .join("; ");
   const data = await getJobsData(hours, typeParam, cookieHeader);
   const rateMetrics = await getRateLimitMetrics(cookieHeader);
+  const discoveryMetrics = await getDiscoveryMetrics(cookieHeader);
 
   const overallSuccess = computeOverallSuccess(data.jobMetrics || []);
   const lastSuccessfulRun = [
@@ -273,6 +289,30 @@ export default async function AdminJobsPage({
             ))}
             <div className="text-muted-foreground pt-1 text-xs">
               p50/p95 pending backend support; showing averages.
+            </div>
+          </CardContent>
+        </Card>
+        {/* Discovery metrics */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Discovery throughput</CardTitle>
+          </CardHeader>
+          <CardContent className="text-sm">
+            <div className="flex items-center justify-between">
+              <div className="text-muted-foreground">
+                Videos scanned (last hour)
+              </div>
+              <div className="font-medium tabular-nums">
+                {discoveryMetrics?.videos_last_hour ?? 0}
+              </div>
+            </div>
+            <div className="mt-2 flex items-center justify-between">
+              <div className="text-muted-foreground">
+                Active enrichment jobs
+              </div>
+              <div className="font-medium tabular-nums">
+                {discoveryMetrics?.active_enrichment ?? 0}
+              </div>
             </div>
           </CardContent>
         </Card>
