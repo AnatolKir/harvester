@@ -7,15 +7,7 @@ builder = "dockerfile"
 dockerfile = "Dockerfile"
 dockerfileTarget = "production"
 
-# Build configuration
-# Include config files so infra edits trigger a deploy
-watchPatterns = [
-  "src/**",
-  "package*.json",
-  "tsconfig.json",
-  "railway.toml",
-  "Dockerfile",
-]
+# Build configuration (no explicit watch patterns; use default auto-deploy)
 
 # Build arguments (passed to Docker)
 [build.args]
