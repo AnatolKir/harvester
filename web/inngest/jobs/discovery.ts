@@ -109,8 +109,18 @@ export const videoDiscoveryJob = inngest.createFunction(
             }
             const res = await fetchPromotedVideoIds(mcp, {
               region: 'US',
-              windowHours: 6,
-              pageSize: limit,
+              keywords: [
+                'ad',
+                'sponsored',
+                'review',
+                'promo',
+                'coupon',
+                'shop',
+                'amazon',
+                'skincare',
+              ],
+              limit,
+              contentType: 'all',
             });
             items = res;
             await breaker.onSuccess();
