@@ -1,23 +1,47 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 export default function TriggerDiscoveryClient() {
   const [limit, setLimit] = useState<number>(50);
   const [isPending, startTransition] = useTransition();
+  const [message, setMessage] = useState<string>("");
+  const [isError, setIsError] = useState<boolean>(false);
+  const router = useRouter();
 
   const onSubmit = () => {
     startTransition(async () => {
+      setMessage("");
+      setIsError(false);
       const base = (process.env.NEXT_PUBLIC_BASE_URL || "").replace(/\/$/, "");
       const url = base ? `${base}/api/admin/jobs` : "/api/admin/jobs";
-      await fetch(url, {
+      const res = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "trigger_discovery", limit }),
         cache: "no-store",
       });
+      try {
+        const json = await res.json();
+        if (!res.ok || json?.success === false) {
+          setIsError(true);
+          setMessage(json?.error || `Failed (${res.status})`);
+        } else {
+          setMessage("Discovery triggered");
+          router.refresh();
+        }
+      } catch {
+        if (!res.ok) {
+          setIsError(true);
+          setMessage(`Failed (${res.status})`);
+        } else {
+          setMessage("Discovery triggered");
+          router.refresh();
+        }
+      }
     });
   };
 
@@ -37,6 +61,13 @@ export default function TriggerDiscoveryClient() {
       <Button type="button" onClick={onSubmit} disabled={isPending}>
         {isPending ? "Starting…" : "Start Discovery"}
       </Button>
+      {message && (
+        <div
+          className={`text-sm ${isError ? "text-destructive" : "text-muted-foreground"}`}
+        >
+          {message}
+        </div>
+      )}
     </div>
   );
 }
