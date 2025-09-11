@@ -138,6 +138,9 @@ metrics = true
 # Enable tracing (if APM is configured)
 tracing = false
 
+# Deployment bump: force Railway to pick up latest commit
+# timestamp: 2025-09-11T12:26Z
+
 # Alerts configuration (requires Railway Teams plan)
 # [alerts]
 # healthcheck = true
