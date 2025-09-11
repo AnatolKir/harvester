@@ -159,9 +159,9 @@ async function executeBrightDataHttp(params: Record<string, unknown>): Promise<a
     const seen = new Set<string>();
     const out: Array<{ url: string; video_id: string; title?: string }> = [];
     let m: RegExpExecArray | null;
-    while ((m = urlRegex.exec(html)) !== null) {
-      const videoId = m[1];
-      const url = m[0];
+    while ((m = urlRegex.exec(html)) !== null && m[1] && m[0]) {
+      const videoId: string = String(m[1]);
+      const url: string = String(m[0]);
       if (!seen.has(videoId)) {
         seen.add(videoId);
         out.push({ url, video_id: videoId });
