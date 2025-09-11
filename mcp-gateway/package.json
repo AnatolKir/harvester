@@ -1,6 +1,6 @@
 {
   "name": "mcp-gateway",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "MCP Gateway server for translating custom tools to BrightData's standard MCP service",
   "main": "dist/index.js",
   "scripts": {
