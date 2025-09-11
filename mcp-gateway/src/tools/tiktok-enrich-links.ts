@@ -129,8 +129,8 @@ function extractHttpLinks(html: string): string[] {
     // naive href extraction
     const hrefRe = /href\s*=\s*"(https?:[^"\s]+)"/gi;
     let m: RegExpExecArray | null;
-    while ((m = hrefRe.exec(html)) !== null) {
-      const url = m[1];
+    while ((m = hrefRe.exec(html)) !== null && m[1]) {
+      const url: string = String(m[1]);
       if (isLikelyOutbound(url)) out.push(url);
       if (out.length > 200) break; // safety
     }
