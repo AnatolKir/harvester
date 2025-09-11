@@ -125,8 +125,9 @@ function mapToBrightDataParams(params: TikTokSearchParams): Record<string, unkno
  */
 async function executeBrightDataHttp(params: Record<string, unknown>): Promise<any[]> {
   try {
-    const apiToken = process.env.API_TOKEN || process.env.BRIGHTDATA_API_KEY;
-    if (!apiToken) throw new Error('Missing Bright Data API token');
+    const apiToken: string =
+      process.env.API_TOKEN ?? process.env.BRIGHTDATA_API_KEY ?? '';
+    if (apiToken.length === 0) throw new Error('Missing Bright Data API token');
 
     // Use Bright Data request API to fetch a TikTok promoted feed via Google site search as fallback
     // This is a pragmatic approach while keeping the interface stable
@@ -139,7 +140,7 @@ async function executeBrightDataHttp(params: Record<string, unknown>): Promise<a
       'https://api.brightdata.com/request',
       {
         url: googleUrl,
-        zone: process.env.WEB_UNLOCKER_ZONE || 'mcp_unlocker',
+        zone: process.env.WEB_UNLOCKER_ZONE ?? 'mcp_unlocker',
         format: 'raw',
       },
       {
@@ -165,7 +166,9 @@ async function executeBrightDataHttp(params: Record<string, unknown>): Promise<a
         seen.add(videoId);
         out.push({ url, video_id: videoId });
       }
-      if (out.length >= (params.limit as number | undefined) || 0) break;
+      const limit =
+        typeof (params as any).limit === 'number' ? (params as any).limit : 0;
+      if (limit > 0 && out.length >= limit) break;
     }
 
     return out;
