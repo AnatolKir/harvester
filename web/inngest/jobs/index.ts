@@ -15,6 +15,7 @@ export {
   deadLetterQueueJob,
   jobStatusJob,
   maintenanceCleanupJob,
+  watchdogStuckDiscoveryJobs,
 } from './system';
 
 // Collect all functions for easy import
@@ -34,6 +35,7 @@ import {
   deadLetterQueueJob,
   jobStatusJob,
   maintenanceCleanupJob,
+  watchdogStuckDiscoveryJobs,
 } from './system';
 
 // Import monitoring jobs
@@ -64,6 +66,7 @@ export const allJobs = [
   deadLetterQueueJob,
   jobStatusJob,
   maintenanceCleanupJob,
+  watchdogStuckDiscoveryJobs,
 
   // Monitoring jobs
   healthCheck,

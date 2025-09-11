@@ -307,9 +307,10 @@ export const videoDiscoveryJob = inngest.createFunction(
         await inngest.send({
           name: 'tiktok/job.status.update',
           data: {
-            jobId: `discovery-${Date.now()}`,
+            jobId,
             status: 'failed',
             jobType: 'discovery',
+            completedAt: Date.now(),
             metadata: {
               error: error instanceof Error ? error.message : String(error),
               attempt,
