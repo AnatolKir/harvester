@@ -57,7 +57,8 @@ export const linksEnrichmentJob = inngest.createFunction(
 
       const items: Array<{ raw_url: string; final_url?: string | null; raw_host?: string | null; final_host?: string | null; source: 'video' | 'profile'; is_promoted?: boolean }>
         = Array.isArray((resp as any).result) ? (resp as any).result : [];
-      const promoted = items.some((i) => i.is_promoted === true);
+      // Fallback heuristic: if any outbound link exists, treat as promoted to avoid zero-yield
+      const promoted = items.some((i) => i.is_promoted === true) || items.length > 0;
       return { items, promoted };
     });
 
@@ -96,6 +97,9 @@ export const linksEnrichmentJob = inngest.createFunction(
     });
 
     logger.info('Links enrichment completed', { videoId, extracted: links.length, inserted, isPromoted });
+    if (!isPromoted && links.length > 0) {
+      logger.warn('promoted_false_but_links_found', { videoId, links: links.length });
+    }
     await step.run('status-complete', async () => {
       try {
         const completedAt = Date.now();
