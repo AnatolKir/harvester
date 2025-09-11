@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1.4
 
 # Build arguments
-ARG NODE_VERSION=18.20.5
+ARG NODE_VERSION=20.18.1
 ARG ALPINE_VERSION=3.20
 
 # ===========================
