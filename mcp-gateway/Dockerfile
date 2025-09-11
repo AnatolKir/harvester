@@ -114,33 +114,4 @@ ENV NODE_OPTIONS="--max-old-space-size=512"
 ENTRYPOINT ["node"]
 CMD ["dist/index.js"]
 
-# ===========================
-# Stage 4: Development (optional)
-# ===========================
-FROM node:${NODE_VERSION}-alpine${ALPINE_VERSION} AS development
-
-# Install development tools
-RUN apk add --no-cache \
-    python3 \
-    make \
-    g++ \
-    curl \
-    git
-
-WORKDIR /app
-
-# Copy package files
-COPY package*.json ./
-COPY tsconfig.json ./
-
-# Install all dependencies
-RUN npm ci
-
-# Copy all source files
-COPY . .
-
-# Expose port
-EXPOSE 3333
-
-# Development command with hot reload
-CMD ["npm", "run", "dev"]
+# (Development stage removed to ensure production image is built by default)
