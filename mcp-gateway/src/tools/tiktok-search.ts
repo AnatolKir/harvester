@@ -131,8 +131,9 @@ async function executeBrightDataHttp(params: Record<string, unknown>): Promise<a
 
     // Use Bright Data request API to fetch a TikTok promoted feed via Google site search as fallback
     // This is a pragmatic approach while keeping the interface stable
+    // Broad search for TikTok video pages; promotion is determined during enrichment
     const query = encodeURIComponent(
-      `${String((params as any).query ?? '')} site:tiktok.com \/video\/ (#ad OR sponsored)`
+      `${String((params as any).query ?? '')} site:tiktok.com \/video\/`
     );
     const googleUrl = `https://www.google.com/search?q=${query}`;
 
