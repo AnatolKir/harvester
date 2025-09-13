@@ -161,10 +161,14 @@ export const videoDiscoveryJob = inngest.createFunction(
         for (const v of items) {
           if (!v.video_id || seen.has(v.video_id)) continue;
           seen.add(v.video_id);
+          // Derive username from TikTok URL if available
+          const usernameMatch = v.url.match(/\/(@[A-Za-z0-9_.-]+)\//);
+          const username = usernameMatch ? usernameMatch[1] : 'unknown';
           const { error } = await supabase.from('video').upsert(
             {
               video_id: v.video_id,
-              url: v.url,
+              video_url: v.url,
+              username,
               is_promoted: null,
             },
             { onConflict: 'video_id' }

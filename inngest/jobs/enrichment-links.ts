@@ -33,11 +33,11 @@ export const linksEnrichmentJob = inngest.createFunction(
     const videoUrl = await step.run('lookup-video-url', async () => {
       const { data, error } = await supabase
         .from('video')
-        .select('url')
+        .select('video_url')
         .eq('video_id', videoId)
         .maybeSingle();
       if (error) throw new Error(`Video lookup failed: ${error.message}`);
-      const url = data?.url as string | undefined;
+      const url = (data as any)?.video_url as string | undefined;
       if (!url) throw new Error('Video URL not found');
       return url;
     });
