@@ -1,4 +1,4 @@
-export const dynamic = "force-dynamic";
+export const dynamic = "force-dynamic"; // noop redeploy marker 2025-09-13
 export const runtime = "nodejs";
 import { NextRequest, NextResponse } from "next/server";
 

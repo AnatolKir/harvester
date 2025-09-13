@@ -164,7 +164,7 @@ export class Server {
   public async start(): Promise<void> {
     return new Promise((resolve) => {
       this.server = this.app.listen(this.port, () => {
-        logger.info(`🚀 MCP Gateway server started on port ${this.port}`);
+        logger.info(`🚀 MCP Gateway server started on port ${this.port} [redeploy-marker-2025-09-13]`);
         logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
         logger.info(`Build revision: ${process.env.RAILWAY_GIT_COMMIT_SHA || 'unknown'}`);
         logger.info(`Health check: http://localhost:${this.port}/health`);
