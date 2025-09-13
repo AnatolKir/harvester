@@ -123,7 +123,7 @@ export const videoDiscoveryJob = inngest.createFunction(
                 limit,
                 contentType: 'all',
               }),
-              5 * 60 * 1000
+              90_000
             );
             items = res;
             await breaker.onSuccess();

@@ -232,7 +232,7 @@ export const watchdogStuckDiscoveryJobs = inngest.createFunction(
   { cron: '*/1 * * * *' },
   async ({ step, logger }) => {
     const supabase = getServiceSupabase();
-    const thresholdMinutes = 3;
+    const thresholdMinutes = 8;
     const result = await step.run('find-stuck', async () => {
       const { data, error } = await supabase
         .from('job_status')
