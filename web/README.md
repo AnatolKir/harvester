@@ -200,3 +200,5 @@ Notes:
 ### Runbooks
 
 See incident procedures in `web/docs/incidents.md` and operator details in `web/docs/operator-runbook.md`.
+
+<!-- deploy: trigger vercel build - 2025-09-13 -->
